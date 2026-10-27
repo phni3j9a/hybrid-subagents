@@ -1,4 +1,5 @@
 import { existsSync, rmSync } from "node:fs";
+import path from "node:path";
 import { fixLine, nudgeLine } from "./brief.ts";
 import { dialogStep } from "./dialogs.ts";
 import type { AgentStatus, Herdr, HerdrEvent, Subscription } from "./herdr.ts";
@@ -9,7 +10,7 @@ import {
   listChildren, readChild, readMain, readWatch, removeChild, writeWatch,
   type ChildRecord, type MainRecord, type WatchRecord,
 } from "./state.ts";
-import { HyError, oneLine } from "./util.ts";
+import { HyError, oneLine, readJson, writeJsonAtomic } from "./util.ts";
 
 const settled = (status: AgentStatus | undefined) => status === "idle" || status === "done";
 const tail = (text: string, lines = 5) => text.split(/\r?\n/).filter((line) => line.trim()).slice(-lines).join(" / ");
@@ -98,6 +99,8 @@ export class Watcher {
     this.subscription = undefined;
     this.main = existsSync(this.dir) ? readMain(this.dir) : undefined;
     if (!this.main) return this.stop("state removed");
+    // Notices undelivered by an earlier watcher; watch.json already marks them notified.
+    if (!this.pending.length) this.pending = readJson<Notice[]>(this.pendingFile()) ?? [];
     const main = this.main.mainPane;
     if (!await this.herdr.paneGet(main)) return this.cleanupAll("Main pane is gone");
     const children: ChildRecord[] = [];
@@ -149,7 +152,8 @@ export class Watcher {
     if (pane === this.main.mainPane) {
       this.mainStatus = status;
       if (!event.data.agent) this.suspectMainGone();
-      else if (settled(status)) this.scheduleFlush();
+      // flush checks readiness itself; Codex Main reports `unknown` rather than idle.
+      else this.scheduleFlush();
       return;
     }
     const child = this.childByPane(pane);
@@ -260,8 +264,18 @@ export class Watcher {
 
   enqueue(notice: Notice): void {
     this.pending.push(notice);
+    this.savePending();
     this.log(`notice: ${notice.kind} ${notice.name}`);
     this.scheduleFlush();
+  }
+
+  pendingFile(): string { return path.join(this.dir, "pending.json"); }
+
+  /** Kept on disk until delivered, so a restarted watcher still delivers it. */
+  savePending(): void {
+    if (!existsSync(this.dir)) return;
+    if (this.pending.length) writeJsonAtomic(this.pendingFile(), this.pending);
+    else rmSync(this.pendingFile(), { force: true });
   }
 
   scheduleFlush(): void {
@@ -301,6 +315,7 @@ export class Watcher {
       await this.herdr.notify("Hybrid Subagents", text).catch(() => undefined);
     }
     this.pending = [];
+    this.savePending();
     if (!listChildren(this.dir).some((child) => !this.watch(child).gone)) this.stop("no specialists left");
   }
 

@@ -149,6 +149,13 @@ async function prompt(deps: Deps, ctx: MainContext, record: ChildRecord, fallbac
 
 export async function send(deps: Deps, name: string, message: string) {
   const ctx = mainContext(deps.env);
+  // The name becomes a path; keep it inside this Main's state directory.
+  if (!NAME.test(name) || !existsSync(ctx.dir)) throw new HyError("unknown_child", `No specialist named ${name} belongs to this Main pane.`);
+  // Serialized, so concurrent follow-ups get separate turns instead of overwriting one brief.
+  return withLock(ctx.dir, () => sendLocked(deps, ctx, name, message));
+}
+
+async function sendLocked(deps: Deps, ctx: MainContext, name: string, message: string) {
   const record = readChild(ctx.dir, name);
   if (!record) throw new HyError("unknown_child", `No specialist named ${name} belongs to this Main pane.`);
   const info = await deps.herdr.agentGet(record.paneId);

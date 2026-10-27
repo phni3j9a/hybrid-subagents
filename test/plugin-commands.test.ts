@@ -113,6 +113,10 @@ test("send starts a new turn with its own brief and report, but not while the sp
   assert.match(readFileSync(record.brief, "utf8"), /# Follow-up 2 for reviewer-1/);
   assert.match(herdr.prompts.at(-1)!.text, /brief-2\.md/);
   await assert.rejects(send(deps, "nobody", "x"), (error: HyError) => error.code === "unknown_child");
+  await assert.rejects(send(deps, "../reviewer-1", "x"), (error: HyError) => error.code === "unknown_child");
+
+  const turns = await Promise.all([send(deps, "reviewer-1", "First."), send(deps, "reviewer-1", "Second.")]);
+  assert.deepEqual(turns.map((turn) => turn.turn).sort(), [3, 4], "concurrent follow-ups get separate turns");
 });
 
 test("close removes one specialist and rebalances; close --all removes every pane and the state", async () => {

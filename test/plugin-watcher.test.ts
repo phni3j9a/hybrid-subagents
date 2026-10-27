@@ -70,6 +70,24 @@ test("completions reach Main as one notice when Main is idle, never while it wor
   assert.doesNotMatch(mainPrompts()[1], /Still running/);
 });
 
+test("a notice not yet delivered survives a watcher restart", async () => {
+  const worker = await start(deps, { role: "worker", task: "a" });
+  await start(deps, { role: "scout", task: "b" });
+  await watcher.start();
+  herdr.setStatus(MAIN, "working");
+  await finish(worker.pane, "worker-1");
+  assert.equal(mainPrompts().length, 0);
+  watcher.stop("restart");
+  watcher = new Watcher({ herdr, dir: dir(), debounceMs: 5, mainGraceMs: 10, recheckMs: 20 });
+  herdr.setStatus(MAIN, "idle");
+  await watcher.start();
+  await settle();
+  assert.equal(mainPrompts().length, 1);
+  assert.match(mainPrompts()[0], /worker-1 completed/);
+  assert.equal(existsSync(path.join(dir(), "pending.json")), false);
+  watcher.stop("done");
+});
+
 test("a specialist that stops without a report is asked once, then reported", async () => {
   const worker = await start(deps, { role: "worker", task: "a" });
   await watcher.start();
