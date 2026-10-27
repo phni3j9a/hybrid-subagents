@@ -1,0 +1,12 @@
+{
+  "name": "hybrid-subagents",
+  "interface": { "displayName": "Hybrid Subagents" },
+  "plugins": [
+    {
+      "name": "hybrid-subagents",
+      "source": { "source": "local", "path": "./plugins/hybrid-subagents" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "category": "Productivity"
+    }
+  ]
+}

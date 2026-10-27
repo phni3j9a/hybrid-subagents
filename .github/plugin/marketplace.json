@@ -1,0 +1,15 @@
+{
+  "name": "hybrid-subagents",
+  "owner": { "name": "phni3j9a" },
+  "metadata": {
+    "description": "Hybrid Subagents for herdr: multi-vendor specialists for Claude Code, Codex and GitHub Copilot CLI."
+  },
+  "plugins": [
+    {
+      "name": "hybrid-subagents",
+      "source": "./plugins/hybrid-subagents",
+      "description": "Role-based, multi-vendor specialists that run as Claude Code, Codex or Copilot CLI agents in herdr panes.",
+      "version": "0.1.0"
+    }
+  ]
+}
