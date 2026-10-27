@@ -1,0 +1,11 @@
+{
+  "name": "hybrid-subagents",
+  "displayName": "Hybrid Subagents",
+  "version": "0.1.0",
+  "description": "Role-based, multi-vendor specialists (worker, scout, reviewer, designer) that run as Claude Code, Codex or Copilot CLI agents in herdr panes.",
+  "author": { "name": "phni3j9a" },
+  "homepage": "https://github.com/phni3j9a/hybrid-subagents",
+  "repository": "https://github.com/phni3j9a/hybrid-subagents",
+  "license": "MIT",
+  "keywords": ["herdr", "subagents", "multi-model", "delegation"]
+}

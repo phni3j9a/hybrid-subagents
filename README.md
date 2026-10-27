@@ -1,6 +1,6 @@
 # Hybrid Subagents
 
-役割ごとに異なるモデル・プロバイダーを組み合わせて使う専門Agent集です。このリポジトリは将来のherdr等への展開も見据えて `hybrid-subagents` とし、現在提供するPi向けパッケージは **`pi-hybrid-subagents`** です。herdr向けの実装はまだ含みません。
+役割ごとに異なるモデル・プロバイダーを組み合わせて使う専門Agent集です。Pi向けパッケージ **`pi-hybrid-subagents`** と、herdr上のClaude Code・Codex・GitHub Copilot CLIで使うプラグイン **`hybrid-subagents`**（下記「herdr版」）を提供します。
 
 Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じて使い分ける軽量パッケージです。OMPの委任・レビュー方針を参考にし、起動、並列実行、結果回収、セッション継続は **pi-subagents** に任せます。
 
@@ -155,6 +155,94 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 
 指摘には `title`、`body`（問題・発生条件・影響）、P0〜P3に対応する `priority`（0〜3）、`confidence`、`file_path`、`line_start`、`line_end` が入ります。行範囲の差分との対応など意味的な条件はReviewerの指示に含めています。スキーマだけでコード上の主張の正しさまで証明するものではありません。
 
+## herdr版（Claude Code / Codex / GitHub Copilot CLI）
+
+[herdr](https://herdr.dev) のペインで動くClaude Code・Codex・GitHub Copilot CLIのどれをMainにしても、4種類の専門Agentを使い分けられるプラグインです。専門Agentは、役割ごとに指定したCLIを隣のペインで対話モード・フルアクセスで起動します。ベンダーの混在は「役割ごとにどのCLIを使うか」で実現し、各CLIのログイン・サブスクリプションをそのまま使います。設計の詳細は [docs/herdr-plugin-design.md](docs/herdr-plugin-design.md) を参照してください。
+
+### 必要なもの
+
+- herdr 0.9.5以上。Mainはherdrのペイン内で起動します。
+- Node.js 22.19以上。ヘルパーはTypeScriptのままビルドせずに実行します。
+- 役割に割り当てたCLI（`claude`／`codex`／`copilot`）がPATH上にあり、ログイン済みであること。
+- 推奨: `herdr integration install claude`（`codex`、`copilot` も同様）。herdr再起動後のセッション復帰に使われます。
+
+### インストール
+
+| ホスト | 手順 |
+| --- | --- |
+| Claude Code | `/plugin install hybrid-subagents --marketplace phni3j9a/hybrid-subagents`（2.1.275以上）。または `/plugin marketplace add phni3j9a/hybrid-subagents` の後に `/plugin install hybrid-subagents@hybrid-subagents` |
+| Codex | `codex plugin marketplace add phni3j9a/hybrid-subagents` の後に `codex plugin add hybrid-subagents@hybrid-subagents` |
+| GitHub Copilot CLI | `copilot plugin marketplace add phni3j9a/hybrid-subagents` の後に `copilot plugin install hybrid-subagents@hybrid-subagents` |
+
+インストール後は新しいセッションを開始します。プラグインには2つのSkillが入ります。
+
+- `hyagents`: 委任方針。herdr内で委任が役立つときと、完了通知が届いたときに使われます。
+- `hyagents-models`: 役割ごとのCLI・モデル・推論強度・Fastの表示と変更。
+
+Claude Codeでは `/hybrid-subagents:hyagents` のように、プラグイン名付きで表示されます。
+
+### 役割と初期値
+
+| 役割 | 担当 | CLI | モデル | 推論強度 |
+| --- | --- | --- | --- | --- |
+| worker | 実装、修正、周辺調査、局所テスト | codex | `gpt-6-luna` | `max` |
+| scout | 対象ファイルが不明な読み取り探索 | codex | `gpt-6-luna` | `xhigh` |
+| reviewer | 変更によって導入された具体的な不具合の検出 | codex | `gpt-6.1-sol` | `high` |
+| designer | UI/UX設計、画面・コンポーネント実装 | claude | `claude-opus-5-5` | `high` |
+
+どの役割にも、どのCLI・モデルでも割り当てられます。Fastの初期値は全役割offです。
+
+### 普段の使い方
+
+herdrのペインでMainを起動し、普段どおり依頼します。Mainは委任が役立つと判断すると、ヘルパーで専門Agentを起動します。
+
+- **配置**: 最初の専門Agentを起動すると、Mainのペインが左40%・右60%に分かれます。専門Agentは右側に縦に積まれ、数の上限はなく、高さは均等にそろえます。閉じると残りの高さをそろえ直し、全部閉じるとMainが全幅に戻ります。
+- **完了通知**: Mainは専門Agentの起動後、待機や状態確認を繰り返さずにターンを終えます。見張り役のプロセスがherdrのイベントを購読し（ポーリングなし）、専門Agentが報告を書いて終わると、Mainが待機状態のときに `[hybrid-subagents]` で始まる1行の通知をMainに送ります。同時に終わった分は1回にまとめます。
+- **報告**: 指示書と報告はリポジトリの外、`~/.local/state/hybrid-subagents/`（`XDG_STATE_HOME` に従う）に置きます。Reviewerの報告はPi版と同じスキーマのJSONで、ヘルパーが検証します。報告がない・不正な場合は、同じ専門Agentに1回だけ再依頼します。
+- **起動時の確認画面**: フォルダ信頼、Claude Codeのフルアクセス警告、Codexの更新案内は自動で承諾します。知らない画面で止まった場合はペインを残してMainに知らせます。
+- **後片付け**: 不要になった専門AgentはMainが閉じます。タスクがすべて終わるとMainが全ペインを閉じ、実行用ファイルも削除します。Mainが終了した場合も、見張り役が専門Agentをすべて閉じます。
+
+専門AgentはPi版と同じくフルアクセスで動き、Scout／Reviewerが編集しないのは役割指示によるものです。委任方針はSkillとして提供するため、ホストがSkillを使わなかった場面では「hybrid subagentsで」と頼んでください。
+
+### モデルの設定
+
+チャットで「workerのモデルを変えたい」のように頼むと、`hyagents-models` SkillがCLI・モデル・推論強度・Fast・保存先を順に確認して保存します。設定ファイルを直接編集することもできます。
+
+- ユーザー共通: `~/.config/hybrid-subagents/config.json`（`XDG_CONFIG_HOME` に従う）
+- プロジェクト: リポジトリの `.agents/hybrid-subagents.json`。プロジェクト設定が項目ごとに優先されます。
+
+```json
+{
+  "roles": {
+    "worker": { "runtime": "claude", "model": "claude-opus-5-5", "effort": "max", "fast": false, "args": [] }
+  }
+}
+```
+
+- `effort` を `null` にすると、CLIの既定値を使います。有効な値はCLIごとに検証し、モデルが対応しているかは起動時にCLIが確認します。
+- Fastは `claude`（`--settings {"fastMode":true}`）と `codex`（`service_tier="fast"`）だけで有効です。
+- `args` はCLIに追加で渡す引数です。
+- 変更は、次に起動する専門Agentから反映されます。
+
+### ヘルパーと診断
+
+ヘルパーは `plugins/hybrid-subagents/skills/hyagents/scripts/hyagents.ts` です（インストール後は各ホストのプラグインキャッシュ内）。主にMainが使いますが、人が直接実行することもできます。結果はJSONで出力します。
+
+```text
+node <skill-dir>/scripts/hyagents.ts doctor        環境・設定・CLIの診断
+node <skill-dir>/scripts/hyagents.ts list          このMainの専門Agent一覧
+node <skill-dir>/scripts/hyagents.ts close --all   すべての専門Agentを閉じる
+node <skill-dir>/scripts/hyagents.ts config show   役割ごとの実効設定
+```
+
+### 制約
+
+- ログイン済みのCLIを使った実機での通し確認は継続中です。確認画面の自動承諾は、画面の文言に基づくベストエフォートです。
+- Mainの入力欄に入力途中の文字があると、通知がその後ろにつながって送信されることがあります。通知はMainが待機状態のときだけ送ります。
+- Windowsには対応していません。
+
+アンインストールは、Claude Codeが `/plugin uninstall hybrid-subagents@hybrid-subagents`、Codexが `codex plugin remove hybrid-subagents@hybrid-subagents`、Copilot CLIが `copilot plugin uninstall hybrid-subagents` です。設定ファイルは手動で削除してください。
+
 ## 構成と互換性
 
 | 場所 | 内容 |
@@ -165,6 +253,10 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 | `src/models.ts` | 推奨初期値、モデル表現とFast対応判定 |
 | `src/model-command.ts` | 役割別のモデル・Thinking・Fast選択メニュー |
 | `src/native-settings.ts` | ネイティブ設定の読み取りと保存 |
+| `plugins/hybrid-subagents/` | herdr版プラグイン。`plugin.json`（Codex・Copilot CLI）と `.claude-plugin/plugin.json`（Claude Code）、Skill、役割の指示書、ヘルパー |
+| `.claude-plugin/`、`.agents/plugins/`、`.github/plugin/` | Claude Code・Codex・Copilot CLI向けのマーケットプレイス |
+
+herdr版プラグインはnpmで配布するPi版パッケージには含めません。
 
 Mainへの適用にはPiの構造化prompt sectionを使い、他のExtensionの指示やprompt cacheを維持します。子AgentへMain用ポリシーを再注入しません。組み込みの `worker`、`scout`、`reviewer` は上書きしません。
 
@@ -195,5 +287,7 @@ npm pack --dry-run
 テストは一時ディレクトリを使い、実際のPi／pi-subagentsのAgent発見、起動前の契約解決、子セッション起動、標準Fastのpriority付与と他ホスト拡張との共存、per-run overrideの受け入れ、保持セッションの再オープン、ReviewerのJSON Schemaを確認します。通常のテストは外部モデルへリクエストを送らず、ユーザーの認証・Pi設定を変更しません。
 
 実モデルの応答品質、費用、プロバイダーの認証成功、実作業を伴う並列実行／Resumeは、認証済み環境で別途確認してください。
+
+herdr版のテストは、メモリ上の擬似herdrと偽の `herdr` コマンド・ソケットを使います。対象は、設定の解決、各CLIの起動引数、ペイン配置、起動・追加指示・終了、見張り役の通知と後片付け、herdrとの通信形式、マニフェストの整合性です。マニフェストは `claude plugin validate --strict` でも確認できます。
 
 参考: [Pi](https://github.com/earendil-works/pi)、[pi-subagents](https://github.com/nicobailon/pi-subagents)、[Oh My Pi](https://github.com/can1357/oh-my-pi)。由来とライセンスは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) を参照してください。
