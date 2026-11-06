@@ -18,7 +18,7 @@ Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じ
 | `hyagents.reviewer` | `openai-codex/gpt-6.1-sol` | `high` | 変更によって導入された具体的な不具合の検出 |
 | `hyagents.designer` | `anthropic/claude-opus-5-5` | `high` | UI/UX設計、画面・コンポーネント実装 |
 
-Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。暗黙の切り替えは行いません。
+Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。下記のバックアップモデルを登録した場合を除き、暗黙の切り替えは行いません。
 
 ## インストール
 
@@ -113,6 +113,18 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 - 保持セッションの設定はpi-subagentsに任せます。新設定を確実に適用するには新しい子Agentを開始してください。
 
 **v0.3.0からv0.4.0へ更新する場合:** 旧 `~/.pi/agent/hyagents.json`／プロジェクトの `.pi/hyagents.json` は読み書きしません。自動移行・自動削除もしません。Fastが必要なら `/hyagents models` で `openai-codex` のモデルを選んで再保存してください。既存のネイティブ `fast` 設定はそのまま有効です。旧版で作成した保持セッションにもFastや検証拡張の互換性は保証しないため、更新後は新しい子Agentを開始してください。旧ファイルは他の用途に使っていないことを確認してから手動で削除できます。
+
+### バックアップモデル（自動切替）
+
+`/hyagents backup`（または `/hyagents backup worker` など）で役割ごとに1つ選択します。`None — no backup` は選んだ保存先から設定を削除します。候補は認証済みモデルで、主モデルと同じモデルは選べません。途中キャンセルでは保存しません。`/hyagents models reset` はバックアップを消しません。
+
+```json
+{ "subagents": { "agentOverrides": { "hyagents.worker": { "backupModel": "anthropic/claude-opus-5-5:high" } } } }
+```
+
+子Agentがモデルを利用できずに失敗した場合（レート制限・利用枠・過負荷・認証やモデル権限。Pi自身の自動リトライ後）、Mainは確認なしで同じ役割の**新しい子Agent**をバックアップモデルで1回だけ起動します（per-runの `model` 指定と `fast: false`。バックアップではFastを使いません）。新しい子には元の依頼、失敗した子の結果とtranscriptを渡し、現在のワークスペースを確認して完了済みの手順やpush・PR作成などの外部操作を繰り返さずに続けるよう指示します。会話の途中状態は引き継がれないため、途中で失敗した場合はまれに作業が重複する可能性があります。Mainは切替を報告します。バックアップの連鎖や未登録モデルへの切替はしません。
+
+Mainは毎ターン設定を読み直すため、保存後すぐに反映されます（`/reload` は不要）。ユーザー設定と信頼済みプロジェクト設定のうち、プロジェクトの値が優先されます。プロジェクトで削除するとユーザー設定の値が使われます。切替はMainの委任方針（Skill）に基づく判断で、子Agentのモデル照合（pi-subagents）はバックアップを期待値として通常どおり行われます。主モデルが未認証で子が起動できない場合も対象です。
 
 ユーザー設定は通常 `~/.pi/agent/settings.json`、プロジェクト設定はpi-subagentsが解決するプロジェクトの `.pi/settings.json` です。未信頼プロジェクトの設定は読みません。設定ルートがない場合、プロジェクト保存時に現在のディレクトリへ `.pi` を作成します。パッケージ内のAgent定義を直接編集する必要はありません。
 
