@@ -48,7 +48,7 @@ test("automatically applies policy on every Main turn without replacing other pr
     await h.handlers.get("session_start")!({}, h.ctx);
     for (const tool of ["subagents_enable", "subagent", "subagent"]) {
       const event = { systemPrompt: "Pi Main", systemPromptOptions: { selectedTools: [tool], sections: { existing: "preserve" } as Record<string, string> } };
-      assert.equal(h.handlers.get("before_agent_start")!(event, h.ctx), undefined);
+      assert.equal(await h.handlers.get("before_agent_start")!(event, h.ctx), undefined);
       assert.equal(event.systemPromptOptions.sections.existing, "preserve");
       assert.match(event.systemPromptOptions.sections.hyagents, /hyagents.worker/);
       assert.match(event.systemPromptOptions.sections.hyagents, /entirely Main's decision/);
@@ -57,11 +57,11 @@ test("automatically applies policy on every Main turn without replacing other pr
   } finally { h.handlers.get("session_shutdown")?.(); }
 });
 
-test("no Main policy when the subagent tool is disabled or in a child prompt", () => {
+test("no Main policy when the subagent tool is disabled or in a child prompt", async () => {
   const h = harness();
   for (const [prompt, tools] of [["Pi Main", []], ['<active_agent name="hyagents.worker"/>\nchild', ["subagent"]]] as const) {
     const event = { systemPrompt: prompt, systemPromptOptions: { selectedTools: tools, sections: {} } };
-    h.handlers.get("before_agent_start")!(event, h.ctx);
+    await h.handlers.get("before_agent_start")!(event, h.ctx);
     assert.deepEqual(event.systemPromptOptions.sections, {});
   }
 });
@@ -77,12 +77,10 @@ test("another host owns required child extensions without blocking policy or sta
     await h.handlers.get("session_start")!({}, h.ctx);
     assert.equal(h.handlers.has("tool_call"), false);
     const event = { systemPrompt: "Pi Main", systemPromptOptions: { selectedTools: ["subagent"], sections: {} as Record<string, string> } };
-    h.handlers.get("before_agent_start")!(event, h.ctx);
+    await h.handlers.get("before_agent_start")!(event, h.ctx);
     assert.match(event.systemPromptOptions.sections.hyagents, /hyagents.worker/);
     assert.equal(h.notifications.length, 0);
-    await h.commands.get("hyagents").handler("", h.ctx);
-    assert.match(h.notifications.at(-1)!, /Automatic backup switching unavailable/);
-  } finally { owner.dispose(); h.handlers.get("session_shutdown")?.(); }
+  } finally { owner.dispose(); }
 });
 
 test("background children do not register Main hooks or commands", () => {
@@ -111,17 +109,6 @@ test("missing runtime and authentication produce actionable diagnostics without 
   } finally { h.handlers.get("session_shutdown")?.(); }
 });
 
-test("registers backup extension for Main and disposes it on shutdown", async () => {
-  const h = harness();
-  const id = "backup-registration";
-  (h.ctx.sessionManager as any).getSessionId = () => id;
-  const { resolveRequiredChildExtensions } = await import("../node_modules/pi-subagents/src/shared/required-child-extensions.js");
-  await h.handlers.get("session_start")!({}, h.ctx);
-  assert.equal(resolveRequiredChildExtensions(id)[0]?.id, "hyagents.backup");
-  h.handlers.get("session_shutdown")!();
-  assert.equal(resolveRequiredChildExtensions(id).length, 0);
-});
-
 test("diagnostics read the saved backup fresh and report registry and authentication problems", async () => {
   const h = harness();
   const file = path.join(agentDir, "settings.json");
@@ -137,5 +124,11 @@ test("diagnostics read the saved backup fresh and report registry and authentica
     await h.commands.get("hyagents").handler("", h.ctx);
     assert.match(h.notifications.at(-1)!, /backup: openai-codex\/gpt-6.1-sol:high/);
     assert.match(h.notifications.at(-1)!, /authenticate backup openai-codex/);
+    const event = { systemPrompt: "Pi Main", systemPromptOptions: { selectedTools: ["subagent"], sections: {} as Record<string, string> } };
+    await h.handlers.get("before_agent_start")!(event, h.ctx);
+    assert.match(event.systemPromptOptions.sections.hyagents, /Configured backups:\n- hyagents\.worker: openai-codex\/gpt-6\.1-sol:high$/, "Main sees the saved backup without /reload");
+    writeFileSync(file, original);
+    await h.handlers.get("before_agent_start")!(event, h.ctx);
+    assert.doesNotMatch(event.systemPromptOptions.sections.hyagents, /Configured backups:\n/);
   } finally { writeFileSync(file, original); }
 });

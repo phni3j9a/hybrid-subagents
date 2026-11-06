@@ -1,6 +1,4 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { registerRequiredChildExtensions, type RequiredChildExtensionRegistration } from "pi-subagents/required-child-extensions";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 import { activeAgent, describeSelection, modelSpec, ROLE_NAMES } from "../src/models.ts";
@@ -13,17 +11,12 @@ const policy = readFileSync(new URL("../skills/hyagents/SKILL.md", import.meta.u
 export default function hyagents(pi: ExtensionAPI): void {
   // Background children discover ambient extensions. They must not become another Main.
   if (process.env.PI_SUBAGENT_CHILD === "1") return;
-  let registration: RequiredChildExtensionRegistration | undefined;
-  let registrationError: string | undefined;
-  function dispose(): void { registration?.dispose(); registration = undefined; }
-
-  async function diagnostics(ctx: ExtensionContext, includeRegistrationError = true): Promise<{ mapping: string[]; issues: string[] }> {
+  async function diagnostics(ctx: ExtensionContext): Promise<{ mapping: string[]; issues: string[] }> {
     const lines: string[] = [];
     const mapping: string[] = [];
     if (!pi.getAllTools().some((tool) => tool.name === "subagent")) {
       lines.push("pi-subagents is not loaded. Run: pi install npm:pi-subagents@0.76.1, then /reload.");
     }
-    if (includeRegistrationError && registrationError) lines.push(registrationError);
     const available = ctx.modelRegistry.getAvailable();
     for (const name of ROLE_NAMES) {
       try {
@@ -49,21 +42,20 @@ export default function hyagents(pi: ExtensionAPI): void {
   }
 
   pi.on("session_start", async (_event, ctx) => {
-    dispose();
-    registrationError = undefined;
     if (activeAgent(ctx.getSystemPrompt())) return;
-    try { registration = registerRequiredChildExtensions({ sessionId: ctx.sessionManager.getSessionId(), extensions: [{ id: "hyagents.backup", path: fileURLToPath(new URL("./backup-child.ts", import.meta.url)) }] }); }
-    catch (error) { registrationError = `Automatic backup switching unavailable: ${error instanceof Error ? error.message : String(error)}`; }
-    const { issues } = await diagnostics(ctx, false);
+    const { issues } = await diagnostics(ctx);
     if (issues.length) ctx.ui.notify(issues.join("\n"), "warning");
   });
 
-  pi.on("session_shutdown", dispose);
-
-  pi.on("before_agent_start", (event) => {
+  pi.on("before_agent_start", async (event, ctx) => {
     if (activeAgent(event.systemPrompt) || !event.systemPromptOptions.selectedTools.some((name) => name === "subagent" || name === "subagents_enable")) return;
+    // Read fresh each turn so a saved backup applies without /reload; invalid entries are reported by /hyagents.
+    const backups: string[] = [];
+    for (const name of ROLE_NAMES) {
+      try { const backup = await configuredBackup(ctx, name); if (backup) backups.push(`- ${name}: ${modelSpec(backup)}`); } catch { /* shown in /hyagents */ }
+    }
     // Keep Pi's structured prompt and other extensions' sections (and prompt caching).
-    event.systemPromptOptions.sections.hyagents = policy;
+    event.systemPromptOptions.sections.hyagents = backups.length ? `${policy}\n\nConfigured backups:\n${backups.join("\n")}` : policy;
   });
 
   pi.registerCommand("hyagents", {

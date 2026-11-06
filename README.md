@@ -18,7 +18,7 @@ Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じ
 | `hyagents.reviewer` | `openai-codex/gpt-6.1-sol` | `high` | 変更によって導入された具体的な不具合の検出 |
 | `hyagents.designer` | `anthropic/claude-opus-5-5` | `high` | UI/UX設計、画面・コンポーネント実装 |
 
-Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。暗黙の切り替えは行いません。
+Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。下記のバックアップモデルを登録した場合を除き、暗黙の切り替えは行いません。
 
 ## インストール
 
@@ -109,7 +109,7 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 **legacyの `openai-codex` プロバイダーに限り**、Fastモードのon/offを選べます。認証方式ではなく、選択モデルのプロバイダー名で判定します。pi-subagents標準の `fast: true` が子のリクエストに `service_tier: "priority"` を付けます。優先処理の利用可否・速度・利用枠や費用への影響はプロバイダー側の扱いに依存します。
 
 - Pi 1.2の `openai`（Sign in with ChatGPTを含む）やAnthropicなどではFast選択を表示せず、offとして保存します。認証やモデルをlegacyへ自動変更しません。
-- モデル・Thinking・Fastは、pi-subagents標準の `subagents.agentOverrides` にまとめて保存します。バックアップ切替後だけ、子拡張がpriority指定を除きます。
+- モデル・Thinking・Fastは、pi-subagents標準の `subagents.agentOverrides` にまとめて保存します。独自のリクエスト書き換えや子拡張はありません。
 - 保持セッションの設定はpi-subagentsに任せます。新設定を確実に適用するには新しい子Agentを開始してください。
 
 **v0.3.0からv0.4.0へ更新する場合:** 旧 `~/.pi/agent/hyagents.json`／プロジェクトの `.pi/hyagents.json` は読み書きしません。自動移行・自動削除もしません。Fastが必要なら `/hyagents models` で `openai-codex` のモデルを選んで再保存してください。既存のネイティブ `fast` 設定はそのまま有効です。旧版で作成した保持セッションにもFastや検証拡張の互換性は保証しないため、更新後は新しい子Agentを開始してください。旧ファイルは他の用途に使っていないことを確認してから手動で削除できます。
@@ -122,9 +122,9 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 { "subagents": { "agentOverrides": { "hyagents.worker": { "backupModel": "anthropic/claude-opus-5-5:high" } } } }
 ```
 
-Pi自身の自動リトライが尽きた後に子のモデルがエラーで停止した場合、同じ子セッションで一度だけ切り替え、完了済みの手順を繰り返さず続行します。コンテキスト溢れ・中断では切り替えません。バックアップではFastを使いません。子は最終報告に切替を記載し、Mainも報告します。Main自身や他ホストのモデルは変更しません。
+子Agentがモデルを利用できずに失敗した場合（レート制限・利用枠・過負荷・認証やモデル権限。Pi自身の自動リトライ後）、Mainは確認なしで同じ役割の**新しい子Agent**をバックアップモデルで1回だけ起動します（per-runの `model` 指定と `fast: false`。バックアップではFastを使いません）。新しい子には元の依頼、失敗した子の結果とtranscriptを渡し、現在のワークスペースを確認して完了済みの手順やpush・PR作成などの外部操作を繰り返さずに続けるよう指示します。会話の途中状態は引き継がれないため、途中で失敗した場合はまれに作業が重複する可能性があります。Mainは切替を報告します。バックアップの連鎖や未登録モデルへの切替はしません。
 
-新しい子に設定が反映されます。ユーザー設定と信頼済みプロジェクト設定を毎回読み直し、プロジェクトの値が優先されます。プロジェクトで削除するとユーザー設定の値が使われます。保持した子の再開時は、その親セッションの拡張登録が有効な間に限りバックアップ拡張を継承します。主モデルが未認証で子自体を起動できない場合は切り替えられません。他拡張が必須子拡張の登録を所有している場合も切替は利用できず、`/hyagents` に表示されます。
+Mainは毎ターン設定を読み直すため、保存後すぐに反映されます（`/reload` は不要）。ユーザー設定と信頼済みプロジェクト設定のうち、プロジェクトの値が優先されます。プロジェクトで削除するとユーザー設定の値が使われます。切替はMainの委任方針（Skill）に基づく判断で、子Agentのモデル照合（pi-subagents）はバックアップを期待値として通常どおり行われます。主モデルが未認証で子が起動できない場合も対象です。
 
 ユーザー設定は通常 `~/.pi/agent/settings.json`、プロジェクト設定はpi-subagentsが解決するプロジェクトの `.pi/settings.json` です。未信頼プロジェクトの設定は読みません。設定ルートがない場合、プロジェクト保存時に現在のディレクトリへ `.pi` を作成します。パッケージ内のAgent定義を直接編集する必要はありません。
 
@@ -262,7 +262,6 @@ node <skill-dir>/scripts/hyagents.ts config show   役割ごとの実効設定
 | `agents/` | 名前空間付きの4つのネイティブAgent定義 |
 | `skills/hyagents/SKILL.md` | 短い委任方針。Extensionもこの本文を読み、重複した方針を持たない |
 | `extensions/hyagents.ts` | Mainへの自動適用、コマンド登録と準備状況の診断 |
-| `extensions/backup-child.ts` | 子セッション内のバックアップ自動切替 |
 | `src/models.ts` | 推奨初期値、モデル表現とFast対応判定 |
 | `src/model-command.ts` | 役割別のモデル・Thinking・Fast選択メニュー |
 | `src/native-settings.ts` | ネイティブ設定の読み取りと保存 |

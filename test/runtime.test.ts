@@ -190,3 +190,17 @@ test("native Fast rejects openai and other unsupported providers", async () => {
     if (!result.ok) assert.match(result.message, /[Ff]ast/);
   }
 });
+
+test("backup relaunch: per-run backup model needs fast:false when the role uses Fast", async () => {
+  try {
+    await saveSelection(fixture, "hyagents.worker", ROLES["hyagents.worker"], "user", true);
+    const backup = modelSpec("hyagents.designer");
+    const rejected = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, model: backup });
+    assert.equal(rejected.ok, false);
+    const result = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, model: backup, fast: false });
+    assert.ok(result.ok, JSON.stringify(result));
+    assert.equal(result.contract.model, backup);
+  } finally {
+    writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ packages: [root] }));
+  }
+});
