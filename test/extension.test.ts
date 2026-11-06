@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -80,7 +80,9 @@ test("another host owns required child extensions without blocking policy or sta
     h.handlers.get("before_agent_start")!(event, h.ctx);
     assert.match(event.systemPromptOptions.sections.hyagents, /hyagents.worker/);
     assert.equal(h.notifications.length, 0);
-  } finally { owner.dispose(); }
+    await h.commands.get("hyagents").handler("", h.ctx);
+    assert.match(h.notifications.at(-1)!, /Automatic backup switching unavailable/);
+  } finally { owner.dispose(); h.handlers.get("session_shutdown")?.(); }
 });
 
 test("background children do not register Main hooks or commands", () => {
@@ -107,4 +109,33 @@ test("missing runtime and authentication produce actionable diagnostics without 
     await h.commands.get("hyagents").handler("", h.ctx);
     assert.match(h.notifications.at(-1)!, /hyagents.worker: openai-codex\/gpt-6-luna:max/);
   } finally { h.handlers.get("session_shutdown")?.(); }
+});
+
+test("registers backup extension for Main and disposes it on shutdown", async () => {
+  const h = harness();
+  const id = "backup-registration";
+  (h.ctx.sessionManager as any).getSessionId = () => id;
+  const { resolveRequiredChildExtensions } = await import("../node_modules/pi-subagents/src/shared/required-child-extensions.js");
+  await h.handlers.get("session_start")!({}, h.ctx);
+  assert.equal(resolveRequiredChildExtensions(id)[0]?.id, "hyagents.backup");
+  h.handlers.get("session_shutdown")!();
+  assert.equal(resolveRequiredChildExtensions(id).length, 0);
+});
+
+test("diagnostics read the saved backup fresh and report registry and authentication problems", async () => {
+  const h = harness();
+  const file = path.join(agentDir, "settings.json");
+  const original = readFileSync(file, "utf8");
+  const save = (backupModel: string) => writeFileSync(file, JSON.stringify({ ...JSON.parse(original), subagents: { agentOverrides: { "hyagents.worker": { backupModel } } } }));
+  try {
+    save("unknown/missing:high");
+    await h.commands.get("hyagents").handler("", h.ctx);
+    assert.match(h.notifications.at(-1)!, /backup: unknown\/missing:high/);
+    assert.match(h.notifications.at(-1)!, /backup missing unknown\/missing/);
+    save("openai-codex/gpt-6.1-sol:high");
+    h.ctx.modelRegistry.getAvailable = () => [];
+    await h.commands.get("hyagents").handler("", h.ctx);
+    assert.match(h.notifications.at(-1)!, /backup: openai-codex\/gpt-6.1-sol:high/);
+    assert.match(h.notifications.at(-1)!, /authenticate backup openai-codex/);
+  } finally { writeFileSync(file, original); }
 });

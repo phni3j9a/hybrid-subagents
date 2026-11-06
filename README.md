@@ -109,10 +109,22 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 **legacyの `openai-codex` プロバイダーに限り**、Fastモードのon/offを選べます。認証方式ではなく、選択モデルのプロバイダー名で判定します。pi-subagents標準の `fast: true` が子のリクエストに `service_tier: "priority"` を付けます。優先処理の利用可否・速度・利用枠や費用への影響はプロバイダー側の扱いに依存します。
 
 - Pi 1.2の `openai`（Sign in with ChatGPTを含む）やAnthropicなどではFast選択を表示せず、offとして保存します。認証やモデルをlegacyへ自動変更しません。
-- モデル・Thinking・Fastは、pi-subagents標準の `subagents.agentOverrides` にまとめて保存します。独自のリクエスト書き換えや子拡張はありません。
+- モデル・Thinking・Fastは、pi-subagents標準の `subagents.agentOverrides` にまとめて保存します。バックアップ切替後だけ、子拡張がpriority指定を除きます。
 - 保持セッションの設定はpi-subagentsに任せます。新設定を確実に適用するには新しい子Agentを開始してください。
 
 **v0.3.0からv0.4.0へ更新する場合:** 旧 `~/.pi/agent/hyagents.json`／プロジェクトの `.pi/hyagents.json` は読み書きしません。自動移行・自動削除もしません。Fastが必要なら `/hyagents models` で `openai-codex` のモデルを選んで再保存してください。既存のネイティブ `fast` 設定はそのまま有効です。旧版で作成した保持セッションにもFastや検証拡張の互換性は保証しないため、更新後は新しい子Agentを開始してください。旧ファイルは他の用途に使っていないことを確認してから手動で削除できます。
+
+### バックアップモデル（自動切替）
+
+`/hyagents backup`（または `/hyagents backup worker` など）で役割ごとに1つ選択します。`None — no backup` は選んだ保存先から設定を削除します。候補は認証済みモデルで、主モデルと同じモデルは選べません。途中キャンセルでは保存しません。`/hyagents models reset` はバックアップを消しません。
+
+```json
+{ "subagents": { "agentOverrides": { "hyagents.worker": { "backupModel": "anthropic/claude-opus-5-5:high" } } } }
+```
+
+Pi自身の自動リトライが尽きた後に子のモデルがエラーで停止した場合、同じ子セッションで一度だけ切り替え、完了済みの手順を繰り返さず続行します。コンテキスト溢れ・中断では切り替えません。バックアップではFastを使いません。子は最終報告に切替を記載し、Mainも報告します。Main自身や他ホストのモデルは変更しません。
+
+新しい子に設定が反映されます。ユーザー設定と信頼済みプロジェクト設定を毎回読み直し、プロジェクトの値が優先されます。プロジェクトで削除するとユーザー設定の値が使われます。保持した子の再開時は、その親セッションの拡張登録が有効な間に限りバックアップ拡張を継承します。主モデルが未認証で子自体を起動できない場合は切り替えられません。他拡張が必須子拡張の登録を所有している場合も切替は利用できず、`/hyagents` に表示されます。
 
 ユーザー設定は通常 `~/.pi/agent/settings.json`、プロジェクト設定はpi-subagentsが解決するプロジェクトの `.pi/settings.json` です。未信頼プロジェクトの設定は読みません。設定ルートがない場合、プロジェクト保存時に現在のディレクトリへ `.pi` を作成します。パッケージ内のAgent定義を直接編集する必要はありません。
 
@@ -250,6 +262,7 @@ node <skill-dir>/scripts/hyagents.ts config show   役割ごとの実効設定
 | `agents/` | 名前空間付きの4つのネイティブAgent定義 |
 | `skills/hyagents/SKILL.md` | 短い委任方針。Extensionもこの本文を読み、重複した方針を持たない |
 | `extensions/hyagents.ts` | Mainへの自動適用、コマンド登録と準備状況の診断 |
+| `extensions/backup-child.ts` | 子セッション内のバックアップ自動切替 |
 | `src/models.ts` | 推奨初期値、モデル表現とFast対応判定 |
 | `src/model-command.ts` | 役割別のモデル・Thinking・Fast選択メニュー |
 | `src/native-settings.ts` | ネイティブ設定の読み取りと保存 |
