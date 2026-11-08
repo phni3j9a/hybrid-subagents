@@ -111,9 +111,9 @@ test("missing runtime and authentication produce actionable diagnostics without 
 
 test("diagnostics read the saved backup fresh and report registry and authentication problems", async () => {
   const h = harness();
-  const file = path.join(agentDir, "settings.json");
-  const original = readFileSync(file, "utf8");
-  const save = (backupModel: string) => writeFileSync(file, JSON.stringify({ ...JSON.parse(original), subagents: { agentOverrides: { "hyagents.worker": { backupModel } } } }));
+  const file = path.join(agentDir, "hyagents.json");
+  const original = "{}";
+  const save = (backupModel: string) => writeFileSync(file, JSON.stringify({ backupModels: { "hyagents.worker": backupModel } }));
   try {
     save("unknown/missing:high");
     await h.commands.get("hyagents").handler("", h.ctx);

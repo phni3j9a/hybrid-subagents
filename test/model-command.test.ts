@@ -18,12 +18,12 @@ mkdirSync(agentDir); mkdirSync(cwd);
 process.env.PI_CODING_AGENT_DIR = agentDir;
 const root = fileURLToPath(new URL("../", import.meta.url));
 const settingsPath = path.join(agentDir, "settings.json");
-const fastPath = path.join(agentDir, "hyagents.json");
+const backupPath = path.join(agentDir, "hyagents.json");
 const base = { packages: [root], theme: "dark", subagents: { agentOverrides: { "hyagents.worker": { tools: ["read", "edit"], fast: false }, unrelated: { model: "keep/me" } } } };
 beforeEach(() => {
   writeFileSync(settingsPath, JSON.stringify(base));
   rmSync(path.join(cwd, ".pi"), { recursive: true, force: true });
-  rmSync(fastPath, { force: true });
+  rmSync(backupPath, { force: true });
 });
 after(() => rmSync(fixture, { recursive: true, force: true }));
 
@@ -62,7 +62,7 @@ test("role picker saves a different model and lower thinking to native settings,
   assert.equal(saved.theme, "dark");
   assert.deepEqual(saved.subagents.agentOverrides.unrelated, base.subagents.agentOverrides.unrelated);
   assert.deepEqual(saved.subagents.agentOverrides["hyagents.worker"], { tools: ["read", "edit"], fast: false, model: "openai-codex/gpt-6.1-sol:low", thinking: "low" });
-  assert.equal(existsSync(fastPath), false);
+  assert.equal(existsSync(backupPath), false);
   assert.equal(modelSpec(await configuredSelection("hyagents.worker", h.ctx)), "openai-codex/gpt-6.1-sol:low");
   assert.match(h.notifications.at(-1)!.text, /Applies to new children/);
   assert.equal(h.notifications.at(-1)!.type, "info");
@@ -143,18 +143,18 @@ test("malformed settings are not overwritten", async () => {
   const h = ui(["openai-codex", "gpt-6.1-sol", "low", OFF, "User — all projects"]);
   await assert.rejects(modelCommand("worker", h.ctx), /parse settings/);
   assert.equal(readFileSync(settingsPath, "utf8"), "{broken json");
-  assert.equal(existsSync(fastPath), false, "No legacy Fast file is created");
-  writeFileSync(fastPath, JSON.stringify({ fast: { "hyagents.scout": true } }));
+  assert.equal(existsSync(backupPath), false, "No legacy Fast file is created");
+  writeFileSync(backupPath, JSON.stringify({ fast: { "hyagents.scout": true } }));
   await assert.rejects(modelCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", ON, "User — all projects"]).ctx), /parse settings/);
-  assert.deepEqual(JSON.parse(readFileSync(fastPath, "utf8")), { fast: { "hyagents.scout": true } }, "Legacy Fast file is untouched");
+  assert.deepEqual(JSON.parse(readFileSync(backupPath, "utf8")), { fast: { "hyagents.scout": true } }, "Legacy Fast file is untouched");
 });
 
 test("legacy Fast files are ignored and never modified, even when malformed", async () => {
-  writeFileSync(fastPath, "{broken json");
+  writeFileSync(backupPath, "{broken json");
   const h = ui(["openai-codex", "gpt-6.1-sol", "low", ON, "User — all projects"]);
   await modelCommand("worker", h.ctx);
   assert.equal(await configuredFast("hyagents.worker", h.ctx), true);
-  assert.equal(readFileSync(fastPath, "utf8"), "{broken json");
+  assert.equal(readFileSync(backupPath, "utf8"), "{broken json");
 });
 
 test("Fast saves for different roles are merged, not replaced", async () => {
@@ -227,17 +227,17 @@ test("slash completions expose model selection, roles and reset", () => {
   assert.equal(modelCompletions("unknown"), null);
 });
 
-test("backup saves, clears and preserves unrelated fields", async () => {
+test("backup saves to hyagents.json, never Pi settings, and clears preserving unrelated fields", async () => {
+  const original = readFileSync(settingsPath, "utf8");
+  writeFileSync(backupPath, JSON.stringify({ fast: { "hyagents.worker": true }, backupModels: { "hyagents.scout": "keep/me:high" } }));
   await backupCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", "User — all projects"]).ctx);
-  let entry = JSON.parse(readFileSync(settingsPath, "utf8")).subagents.agentOverrides["hyagents.worker"];
-  assert.deepEqual(entry, { tools: ["read", "edit"], fast: false, backupModel: "openai-codex/gpt-6.1-sol:low" });
+  assert.equal(readFileSync(settingsPath, "utf8"), original, "pi-subagents 0.85+ rejects unknown agentOverrides fields");
+  assert.deepEqual(JSON.parse(readFileSync(backupPath, "utf8")), { fast: { "hyagents.worker": true }, backupModels: { "hyagents.scout": "keep/me:high", "hyagents.worker": "openai-codex/gpt-6.1-sol:low" } });
   await modelCommand("reset", ui(["User — all projects"]).ctx);
-  assert.equal(JSON.parse(readFileSync(settingsPath, "utf8")).subagents.agentOverrides["hyagents.worker"].backupModel, "openai-codex/gpt-6.1-sol:low");
+  assert.equal(modelSpec((await configuredBackup(ui([]).ctx, "hyagents.worker"))!), "openai-codex/gpt-6.1-sol:low");
   const h = ui(["None — no backup", "User — all projects"]);
   await backupCommand("worker", h.ctx);
-  entry = JSON.parse(readFileSync(settingsPath, "utf8")).subagents.agentOverrides["hyagents.worker"];
-  assert.equal(entry.backupModel, undefined);
-  assert.deepEqual(entry.tools, ["read", "edit"]);
+  assert.deepEqual(JSON.parse(readFileSync(backupPath, "utf8")).backupModels, { "hyagents.scout": "keep/me:high" });
   assert.match(h.notifications.at(-1)!.text, /Applies to new children/);
 });
 
@@ -246,16 +246,18 @@ test("backup cancels without writing at each step, rejects primary and saves pro
   const steps = ["openai-codex", "gpt-6.1-sol", "low", "User — all projects"];
   for (let i = 0; i < steps.length; i++) {
     await backupCommand("worker", ui([...steps.slice(0, i), undefined]).ctx);
-    assert.equal(readFileSync(settingsPath, "utf8"), original);
+    assert.equal(existsSync(backupPath), false);
   }
   await backupCommand("", ui([undefined]).ctx);
   await backupCommand("worker", ui(["None — no backup", undefined]).ctx);
   const same = ui(["openai-codex", "gpt-6-luna", "low"]);
   await backupCommand("worker", same.ctx);
   assert.match(same.notifications[0].text, /must differ/);
-  assert.equal(readFileSync(settingsPath, "utf8"), original);
+  await backupCommand("worker", ui(["None — no backup", "User — all projects"]).ctx);
+  assert.equal(existsSync(backupPath), false, "clearing a missing backup creates no file");
   await backupCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", "Project — this project only"]).ctx);
-  assert.equal(JSON.parse(readFileSync(path.join(cwd, ".pi/settings.json"), "utf8")).subagents.agentOverrides["hyagents.worker"].backupModel, "openai-codex/gpt-6.1-sol:low");
+  assert.equal(JSON.parse(readFileSync(path.join(cwd, ".pi/hyagents.json"), "utf8")).backupModels["hyagents.worker"], "openai-codex/gpt-6.1-sol:low");
+  assert.equal(existsSync(path.join(cwd, ".pi/settings.json")), false);
   assert.equal(modelSpec((await configuredBackup(ui([]).ctx, "hyagents.worker"))!), "openai-codex/gpt-6.1-sol:low", "fresh read without /reload");
   const untrusted = ui([]); untrusted.ctx.isProjectTrusted = () => false;
   assert.equal(await configuredBackup(untrusted.ctx, "hyagents.worker"), undefined, "untrusted project backup is ignored");
@@ -263,8 +265,8 @@ test("backup cancels without writing at each step, rejects primary and saves pro
   assert.ok(modelCompletions("backup w")!.some((item) => item.value === "backup worker"));
 });
 
-test("backup save refuses malformed settings without overwriting", async () => {
-  writeFileSync(settingsPath, "{broken");
+test("backup save refuses malformed hyagents.json without overwriting", async () => {
+  writeFileSync(backupPath, "{broken");
   await assert.rejects(backupCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", "User — all projects"]).ctx), /parse settings/);
-  assert.equal(readFileSync(settingsPath, "utf8"), "{broken");
+  assert.equal(readFileSync(backupPath, "utf8"), "{broken");
 });
