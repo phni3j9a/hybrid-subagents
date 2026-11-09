@@ -86,7 +86,7 @@ export async function modelCommand(args: string, ctx: ExtensionCommandContext): 
 }
 
 export async function backupCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
-  if (!ctx.hasUI) { ctx.ui.notify("Model selection requires an interactive or dialog-capable RPC client. Configure subagents.agentOverrides in Pi settings for headless use.", "warning"); return; }
+  if (!ctx.hasUI) { ctx.ui.notify("Model selection requires an interactive or dialog-capable RPC client. Configure backupModels in hyagents.json for headless use.", "warning"); return; }
   const parts = args.trim().split(/\s+/).filter(Boolean);
   const usage = "/hyagents backup [worker|scout|reviewer|designer]";
   if (parts.length > 1) { ctx.ui.notify(`Usage: ${usage}`, "error"); return; }

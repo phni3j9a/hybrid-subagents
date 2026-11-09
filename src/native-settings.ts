@@ -8,7 +8,7 @@ import { modelSpec, parseSelection, supportsFast, type ModelSelection, type Role
 export type SettingsScope = "user" | "project";
 
 // Use the pinned runtime's locked, atomic settings merge and project-root resolver.
-type NativeSettings = Pick<typeof import("../node_modules/pi-subagents/src/agents/agents.js"), "mergeBuiltinAgentOverride" | "removeBuiltinAgentOverrideFields" | "findConfiguredProjectRoot" | "discoverAgents">;
+type NativeSettings = Pick<typeof import("../node_modules/pi-subagents/src/agents/agents.js"), "mergeBuiltinAgentOverride" | "findConfiguredProjectRoot" | "discoverAgents">;
 let nativeSettings: Promise<NativeSettings> | undefined;
 function native(): Promise<NativeSettings> {
   const entry = import.meta.resolve("pi-subagents/agents");
@@ -23,24 +23,24 @@ async function prepareScope(cwd: string, scope: SettingsScope): Promise<NativeSe
   return api;
 }
 
-// Same lease and file resolution as pi-subagents, whose own merge drops unknown fields such as backupModel.
+// Backups live in our own hyagents.json: pi-subagents 0.85+ rejects unknown agentOverrides fields such as backupModel.
+// Same lease and project-root resolution as pi-subagents.
 function shared<T>(name: string): Promise<T> {
   const entry = import.meta.resolve("pi-subagents/agents");
   return import(new URL(`../shared/${name}.${entry.endsWith(".ts") ? "ts" : "js"}`, entry).href);
 }
 
-async function settingsFile(cwd: string, scope: SettingsScope): Promise<string | undefined> {
+async function backupFile(cwd: string, scope: SettingsScope): Promise<string | undefined> {
   const utils = await shared<typeof import("../node_modules/pi-subagents/src/shared/utils.js")>("utils");
-  if (scope === "user") return path.join(utils.getAgentDir(), "settings.json");
+  if (scope === "user") return path.join(utils.getAgentDir(), "hyagents.json");
   const root = (await native()).findConfiguredProjectRoot(cwd);
-  return root ? path.join(utils.getProjectConfigDir(root), "settings.json") : undefined;
+  return root ? path.join(utils.getProjectConfigDir(root), "hyagents.json") : undefined;
 }
 
 export async function saveBackup(cwd: string, name: RoleName, selection: ModelSelection | undefined, scope: SettingsScope): Promise<string> {
-  const api = await prepareScope(cwd, scope);
-  if (!selection) return api.removeBuiltinAgentOverrideFields(cwd, name, scope, ["backupModel"]).path;
+  await prepareScope(cwd, scope);
   const lease = await shared<typeof import("../node_modules/pi-subagents/src/shared/settings-file-lease.js")>("settings-file-lease");
-  const file = (await settingsFile(cwd, scope))!;
+  const file = (await backupFile(cwd, scope))!;
   return lease.withSettingsFileLease(file, () => {
     const target = lease.resolveSettingsWriteTarget(file);
     let settings: Record<string, unknown> = {};
@@ -59,11 +59,10 @@ export async function saveBackup(cwd: string, name: RoleName, selection: ModelSe
       return value as Record<string, unknown>;
     };
     settings = object(settings, "root");
-    const subagents = { ...object(settings.subagents, "subagents") };
-    const overrides = { ...object(subagents.agentOverrides, "agentOverrides") };
-    overrides[name] = { ...object(overrides[name], name), backupModel: modelSpec(selection) };
-    subagents.agentOverrides = overrides;
-    settings.subagents = subagents;
+    const backups = { ...object(settings.backupModels, "backupModels") };
+    if (!selection && !(name in backups)) return file;
+    if (selection) backups[name] = modelSpec(selection); else delete backups[name];
+    settings.backupModels = backups;
     const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
     try {
       writeFileSync(temp, `${JSON.stringify(settings, null, 2)}\n`, { flag: "wx", ...(mode === undefined ? {} : { mode: mode | 0o200 }) });
@@ -78,14 +77,14 @@ export async function saveBackup(cwd: string, name: RoleName, selection: ModelSe
 export async function configuredBackup(ctx: Pick<ExtensionContext, "cwd" | "isProjectTrusted">, name: RoleName): Promise<ModelSelection | undefined> {
   let value: unknown;
   for (const scope of ctx.isProjectTrusted() ? ["user", "project"] as const : ["user"] as const) {
-    const file = await settingsFile(ctx.cwd, scope);
+    const file = await backupFile(ctx.cwd, scope);
     let raw: string;
     try { raw = file ? readFileSync(file, "utf8") : "{}"; } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "ENOENT") continue;
       throw error;
     }
-    const entry = (JSON.parse(raw) as { subagents?: { agentOverrides?: Record<string, { backupModel?: unknown }> } })?.subagents?.agentOverrides?.[name];
-    if (entry && typeof entry === "object" && "backupModel" in entry) value = entry.backupModel;
+    const backups = (JSON.parse(raw) as { backupModels?: Record<string, unknown> })?.backupModels;
+    if (backups && typeof backups === "object" && name in backups) value = backups[name];
   }
   if (value !== undefined && typeof value !== "string") throw new Error(`Hybrid Subagents: ${name} backupModel must be a string.`);
   return value ? parseSelection(value) : undefined;
