@@ -4,19 +4,19 @@
 
 Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じて使い分ける軽量パッケージです。OMPの委任・レビュー方針を参考にし、起動、並列実行、結果回収、セッション継続はパッケージに同梱した **pi-subagents** に任せます。
 
-旧称はHyAgentsです。既存設定・保持セッションとの互換性のため、コマンド `/hyagents`、Agent名 `hyagents.*`、Skill名 `hyagents`は維持します。モデル・Thinkingの既存設定もそのまま使えます。Fastの旧独自設定については下記の更新時の注意を参照してください。
+旧称はHyAgentsです。v0.6.0で、コマンド（`/hyagents` → `/hybrid-subagents`）、Agent名（`hyagents.*` → `hybrid-subagents.*`）、Skill名、バックアップの設定ファイル（`hyagents.json` → `hybrid-subagents.json`）、herdr版のSkill名と環境変数（`HYAGENTS_*` → `HYBRID_SUBAGENTS_*`）を正式名称に統一しました。旧名の設定は読みません。更新時は `subagents.agentOverrides` のキーと設定ファイル名、`backupModels` のキーを手動で新しい名前に書き換え、新しい子Agentを開始してください。Fastの旧独自設定については下記の更新時の注意を参照してください。
 
 ## Agent構成
 
-以下は**初期値**です。4役割のモデル・Thinking・Fastモードは `/hyagents models` で変更できます。Workerの `max` も変更可能です。Fastモードの初期値は全役割でoffです。
+以下は**初期値**です。4役割のモデル・Thinking・Fastモードは `/hybrid-subagents models` で変更できます。Workerの `max` も変更可能です。Fastモードの初期値は全役割でoffです。
 
 | Agent | PiのモデルID | Thinking | 担当 |
 | --- | --- | --- | --- |
 | Main | Piで選択中のモデル | 現在の設定 | 対話、計画、委任、統合、最終判断 |
-| `hyagents.worker` | `openai-codex/gpt-6-luna` | `max` | 実装、修正、周辺調査、局所テスト |
-| `hyagents.scout` | `openai-codex/gpt-6-luna` | `xhigh` | 対象ファイルが不明な読み取り探索 |
-| `hyagents.reviewer` | `openai-codex/gpt-6.1-sol` | `high` | 変更によって導入された具体的な不具合の検出 |
-| `hyagents.designer` | `anthropic/claude-opus-5-5` | `high` | UI/UX設計、画面・コンポーネント実装 |
+| `hybrid-subagents.worker` | `openai-codex/gpt-6-luna` | `max` | 実装、修正、周辺調査、局所テスト |
+| `hybrid-subagents.scout` | `openai-codex/gpt-6-luna` | `xhigh` | 対象ファイルが不明な読み取り探索 |
+| `hybrid-subagents.reviewer` | `openai-codex/gpt-6.1-sol` | `high` | 変更によって導入された具体的な不具合の検出 |
+| `hybrid-subagents.designer` | `anthropic/claude-opus-5-5` | `high` | UI/UX設計、画面・コンポーネント実装 |
 
 Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。下記のバックアップモデルを登録した場合を除き、暗黙の切り替えは行いません。
 
@@ -44,14 +44,14 @@ pi remove npm:pi-subagents
 
 未公開の最新版を試す場合は、`npm:pi-hybrid-subagents` の代わりに `git:github.com/phni3j9a/hybrid-subagents` を指定します。Pi 1.2では、Hybrid Subagentsだけを更新する場合は `pi update npm:pi-hybrid-subagents`、全パッケージを更新する場合は `pi update --extensions` を使います（`pi update` 単独はPi本体の更新です）。
 
-旧リポジトリ名で導入したGitHub版からnpm版へ切り替える場合は、二重に読み込まれないよう、先に元のソース指定で登録を外してください。モデル・Thinkingの保存済み設定はそのまま使えます。旧独自Fast設定は下記の手順で再設定してください。
+旧リポジトリ名で導入したGitHub版からnpm版へ切り替える場合は、二重に読み込まれないよう、先に元のソース指定で登録を外してください。保存済み設定は上記のとおり新しい名前へ書き換え、旧独自Fast設定は下記の手順で再設定してください。
 
 ```sh
 pi remove git:github.com/phni3j9a/HyAgents
 pi install npm:pi-hybrid-subagents
 ```
 
-起動中なら `/reload`、そうでなければ通常どおり `pi` を起動します。**毎回 `/hyagents` やSkillを呼び出す必要はありません。** 4つのAgentはパッケージのmanifestから発見され、Mainへ委任方針が自動適用されます。
+起動中なら `/reload`、そうでなければ通常どおり `pi` を起動します。**毎回 `/hybrid-subagents` やSkillを呼び出す必要はありません。** 4つのAgentはパッケージのmanifestから発見され、Mainへ委任方針が自動適用されます。
 
 同梱したpi-subagentsの拡張（`subagent` ツール・スラッシュコマンド）、Skill（`pi-subagents`、`council-mode`）、プロンプトは、Hybrid Subagentsのmanifestから読み込まれます。Hybrid Subagentsの設定処理も同じコピーを使うため、実際に動く版と常に一致します。pi-subagentsを新しい版へ更新するには、それを同梱したHybrid Subagentsのリリースを待ち、`pi update npm:pi-hybrid-subagents` してください。
 
@@ -60,11 +60,11 @@ pi install npm:pi-hybrid-subagents
 確認用コマンド:
 
 ```text
-/hyagents
-/subagents-models hyagents.worker
+/hybrid-subagents
+/subagents-models hybrid-subagents.worker
 ```
 
-`/hyagents` は登録モデルと認証設定の準備状況を表示します。APIへの試験リクエストは送らないため、利用権限、期限切れの認証、利用枠の最終確認は実際の子Agent起動時に行われます。モデルが見つからなければPiやモデルカタログを更新してください。
+`/hybrid-subagents` は登録モデルと認証設定の準備状況を表示します。APIへの試験リクエストは送らないため、利用権限、期限切れの認証、利用枠の最終確認は実際の子Agent起動時に行われます。モデルが見つからなければPiやモデルカタログを更新してください。
 
 プロジェクト限定で使用する場合は、`pi install` に `--local` を付け、Piの通常のプロジェクト信頼設定に従ってください。
 
@@ -91,12 +91,12 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 ## モデルとThinkingの選択
 
 ```text
-/hyagents models
-/hyagents models worker
-/hyagents models scout
-/hyagents models reviewer
-/hyagents models designer
-/hyagents models reset
+/hybrid-subagents models
+/hybrid-subagents models worker
+/hybrid-subagents models scout
+/hybrid-subagents models reviewer
+/hybrid-subagents models designer
+/hybrid-subagents models reset
 ```
 
 引数なしの `models` は4役割の現在の設定を表示します（Fast有効時は末尾に `fast`）。役割を選んだ後、**プロバイダー → モデル → Thinking → Fast（legacyの `openai-codex` のみ） → 保存先**の順に選択します。`models worker` などではその役割の設定を直接開きます。途中でEscなどでキャンセルすると保存しません。
@@ -117,16 +117,16 @@ Scout／Reviewerの非編集方針はプロンプトによる役割定義です�
 - モデル・Thinking・Fastは、pi-subagents標準の `subagents.agentOverrides` にまとめて保存します。独自のリクエスト書き換えや子拡張はありません。
 - 保持セッションの設定はpi-subagentsに任せます。新設定を確実に適用するには新しい子Agentを開始してください。
 
-**v0.3.0からv0.4.0へ更新する場合:** 旧 `hyagents.json` の `fast` は読みません。自動移行もしません。Fastが必要なら `/hyagents models` で `openai-codex` のモデルを選んで再保存してください。既存のネイティブ `fast` 設定はそのまま有効です。旧版で作成した保持セッションにもFastや検証拡張の互換性は保証しないため、更新後は新しい子Agentを開始してください。`hyagents.json` は下記バックアップの保存先として使うため、ファイルごと削除せず `fast` だけを消してください。
+**v0.3.0からv0.4.0へ更新する場合:** 旧 `hyagents.json` の `fast` は読みません。自動移行もしません。Fastが必要なら `/hybrid-subagents models` で `openai-codex` のモデルを選んで再保存してください。既存のネイティブ `fast` 設定はそのまま有効です。旧版で作成した保持セッションにもFastや検証拡張の互換性は保証しないため、更新後は新しい子Agentを開始してください。v0.6.0以降 `hyagents.json` は使わないため、中の `backupModels` を `hybrid-subagents.json` へ移したあとは削除できます。
 
 ### バックアップモデル（自動切替）
 
-`/hyagents backup`（または `/hyagents backup worker` など）で役割ごとに1つ選択します。`None — no backup` は選んだ保存先から設定を削除します。候補は認証済みモデルで、主モデルと同じモデルは選べません。途中キャンセルでは保存しません。`/hyagents models reset` はバックアップを消しません。
+`/hybrid-subagents backup`（または `/hybrid-subagents backup worker` など）で役割ごとに1つ選択します。`None — no backup` は選んだ保存先から設定を削除します。候補は認証済みモデルで、主モデルと同じモデルは選べません。途中キャンセルでは保存しません。`/hybrid-subagents models reset` はバックアップを消しません。
 
-保存先はHybrid Subagents専用の `~/.pi/agent/hyagents.json`（ユーザー）／プロジェクトの `.pi/hyagents.json` です。pi-subagents 0.85以降は `subagents.agentOverrides` の未知フィールドを拒否するため、Piの `settings.json` には書きません。
+保存先はHybrid Subagents専用の `~/.pi/agent/hybrid-subagents.json`（ユーザー）／プロジェクトの `.pi/hybrid-subagents.json` です。pi-subagents 0.85以降は `subagents.agentOverrides` の未知フィールドを拒否するため、Piの `settings.json` には書きません。
 
 ```json
-{ "backupModels": { "hyagents.worker": "anthropic/claude-opus-5-5:high" } }
+{ "backupModels": { "hybrid-subagents.worker": "anthropic/claude-opus-5-5:high" } }
 ```
 
 子Agentがモデルを利用できずに失敗した場合（レート制限・利用枠・過負荷・認証やモデル権限。Pi自身の自動リトライ後）、Mainは確認なしで同じ役割の**新しい子Agent**をバックアップモデルで1回だけ起動します（per-runの `model` 指定と `fast: false`。バックアップではFastを使いません）。新しい子には元の依頼、失敗した子の結果とtranscriptを渡し、現在のワークスペースを確認して完了済みの手順やpush・PR作成などの外部操作を繰り返さずに続けるよう指示します。会話の途中状態は引き継がれないため、途中で失敗した場合はまれに作業が重複する可能性があります。Mainは切替を報告します。バックアップの連鎖や未登録モデルへの切替はしません。
@@ -141,7 +141,7 @@ Mainは毎ターン設定を読み直すため、保存後すぐに反映され�
 {
   "subagents": {
     "agentOverrides": {
-      "hyagents.worker": {
+      "hybrid-subagents.worker": {
         "model": "openai-codex/gpt-6.1-sol:high",
         "thinking": "high",
         "fast": true
@@ -155,7 +155,7 @@ Mainは毎ターン設定を読み直すため、保存後すぐに反映され�
 
 ### 起動時のモデル解決
 
-モデル・Thinking・Fastの解決、per-run override、保持セッションの再開はpi-subagentsに任せます。Hybrid Subagents独自のモデル・Thinking一致検証や起動拒否はありません。Mainのモデル／Thinkingは変更しません。設定画面と `/hyagents` では引き続き設定・モデル登録・認証の準備状況を診断します。
+モデル・Thinking・Fastの解決、per-run override、保持セッションの再開はpi-subagentsに任せます。Hybrid Subagents独自のモデル・Thinking一致検証や起動拒否はありません。Mainのモデル／Thinkingは変更しません。設定画面と `/hybrid-subagents` では引き続き設定・モデル登録・認証の準備状況を診断します。
 
 既存の `subagents.modelScope` や `maxThinking` など、pi-subagents自身の制限は維持されます。Hybrid Subagentsはそれらを自動で緩めません。provider別overrideも標準の優先順位で解決します。Mainへの委任方針ではユーザーの選択を尊重するよう求めますが、これは独自の起動時ガードではありません。
 
@@ -195,10 +195,10 @@ Mainは毎ターン設定を読み直すため、保存後すぐに反映され�
 
 インストール後は新しいセッションを開始します。プラグインには2つのSkillが入ります。
 
-- `hyagents`: 委任方針。herdr内で委任が役立つときと、完了通知が届いたときに使われます。
-- `hyagents-models`: 役割ごとのCLI・モデル・推論強度・Fastの表示と変更。
+- `hybrid-subagents`: 委任方針。herdr内で委任が役立つときと、完了通知が届いたときに使われます。
+- `hybrid-subagents-models`: 役割ごとのCLI・モデル・推論強度・Fastの表示と変更。
 
-Claude Codeでは `/hybrid-subagents:hyagents` のように、プラグイン名付きで表示されます。
+Claude Codeでは `/hybrid-subagents:hybrid-subagents` のように、プラグイン名付きで表示されます。
 
 ### 役割と初期値
 
@@ -225,7 +225,7 @@ herdrのペインでMainを起動し、普段どおり依頼します。Mainは�
 
 ### モデルの設定
 
-チャットで「workerのモデルを変えたい」のように頼むと、`hyagents-models` SkillがCLI・モデル・推論強度・Fast・保存先を順に確認して保存します。設定ファイルを直接編集することもできます。
+チャットで「workerのモデルを変えたい」のように頼むと、`hybrid-subagents-models` SkillがCLI・モデル・推論強度・Fast・保存先を順に確認して保存します。設定ファイルを直接編集することもできます。
 
 - ユーザー共通: `~/.config/hybrid-subagents/config.json`（`XDG_CONFIG_HOME` に従う）
 - プロジェクト: リポジトリの `.agents/hybrid-subagents.json`。プロジェクト設定が項目ごとに優先されます。
@@ -245,13 +245,13 @@ herdrのペインでMainを起動し、普段どおり依頼します。Mainは�
 
 ### ヘルパーと診断
 
-ヘルパーは `plugins/hybrid-subagents/skills/hyagents/scripts/hyagents.ts` です（インストール後は各ホストのプラグインキャッシュ内）。主にMainが使いますが、人が直接実行することもできます。結果はJSONで出力します。
+ヘルパーは `plugins/hybrid-subagents/skills/hybrid-subagents/scripts/hybrid-subagents.ts` です（インストール後は各ホストのプラグインキャッシュ内）。主にMainが使いますが、人が直接実行することもできます。結果はJSONで出力します。
 
 ```text
-node <skill-dir>/scripts/hyagents.ts doctor        環境・設定・CLIの診断
-node <skill-dir>/scripts/hyagents.ts list          このMainの専門Agent一覧
-node <skill-dir>/scripts/hyagents.ts close --all   すべての専門Agentを閉じる
-node <skill-dir>/scripts/hyagents.ts config show   役割ごとの実効設定
+node <skill-dir>/scripts/hybrid-subagents.ts doctor        環境・設定・CLIの診断
+node <skill-dir>/scripts/hybrid-subagents.ts list          このMainの専門Agent一覧
+node <skill-dir>/scripts/hybrid-subagents.ts close --all   すべての専門Agentを閉じる
+node <skill-dir>/scripts/hybrid-subagents.ts config show   役割ごとの実効設定
 ```
 
 ### 制約
@@ -267,8 +267,8 @@ node <skill-dir>/scripts/hyagents.ts config show   役割ごとの実効設定
 | 場所 | 内容 |
 | --- | --- |
 | `agents/` | 名前空間付きの4つのネイティブAgent定義 |
-| `skills/hyagents/SKILL.md` | 短い委任方針。Extensionもこの本文を読み、重複した方針を持たない |
-| `extensions/hyagents.ts` | Mainへの自動適用、コマンド登録と準備状況の診断 |
+| `skills/hybrid-subagents/SKILL.md` | 短い委任方針。Extensionもこの本文を読み、重複した方針を持たない |
+| `extensions/hybrid-subagents.ts` | Mainへの自動適用、コマンド登録と準備状況の診断 |
 | `src/models.ts` | 推奨初期値、モデル表現とFast対応判定 |
 | `src/model-command.ts` | 役割別のモデル・Thinking・Fast選択メニュー |
 | `src/native-settings.ts` | ネイティブ設定の読み取りと保存 |

@@ -27,7 +27,7 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions/hyagents.ts",
+      "./extensions/hybrid-subagents.ts",
       "./node_modules/pi-subagents/bundle/index.js"
     ],
     "skills": [

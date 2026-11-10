@@ -27,7 +27,7 @@ async function prepareScope(cwd: string, scope: SettingsScope): Promise<NativeSe
   return api;
 }
 
-// Backups live in our own hyagents.json: pi-subagents 0.85+ rejects unknown agentOverrides fields such as backupModel.
+// Backups live in our own hybrid-subagents.json: pi-subagents 0.85+ rejects unknown agentOverrides fields such as backupModel.
 // Same lease and project-root resolution as pi-subagents.
 function shared<T>(name: string): Promise<T> {
   return internal(`shared/${name}`);
@@ -35,9 +35,9 @@ function shared<T>(name: string): Promise<T> {
 
 async function backupFile(cwd: string, scope: SettingsScope): Promise<string | undefined> {
   const utils = await shared<typeof import("../node_modules/pi-subagents/src/shared/utils.js")>("utils");
-  if (scope === "user") return path.join(utils.getAgentDir(), "hyagents.json");
+  if (scope === "user") return path.join(utils.getAgentDir(), "hybrid-subagents.json");
   const root = (await native()).findConfiguredProjectRoot(cwd);
-  return root ? path.join(utils.getProjectConfigDir(root), "hyagents.json") : undefined;
+  return root ? path.join(utils.getProjectConfigDir(root), "hybrid-subagents.json") : undefined;
 }
 
 export async function saveBackup(cwd: string, name: RoleName, selection: ModelSelection | undefined, scope: SettingsScope): Promise<string> {

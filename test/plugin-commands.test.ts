@@ -3,12 +3,12 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, beforeEach, test } from "node:test";
-import { close, list, mainContext, send, start, type Deps } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/commands.ts";
-import { listChildren, readChild } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/state.ts";
-import { HyError } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/util.ts";
+import { close, list, mainContext, send, start, type Deps } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/commands.ts";
+import { listChildren, readChild } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/state.ts";
+import { HyError } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/util.ts";
 import { FakeHerdr } from "./helpers/fake-herdr.ts";
 
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-plugin-commands-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-plugin-commands-"));
 after(() => rmSync(fixture, { recursive: true, force: true }));
 
 let herdr: FakeHerdr;
@@ -32,7 +32,7 @@ test("start opens a full-access specialist right of Main, writes its brief and p
   assert.equal(result.pane, "w1:p2");
   assert.deepEqual(herdr.root, { type: "split", direction: "right", ratio: 0.4, first: { type: "pane", pane_id: "w1:p1" }, second: { type: "pane", pane_id: "w1:p2" } });
   const pane = herdr.panes.get("w1:p2")!;
-  assert.deepEqual(pane.env, { HYAGENTS_ROLE: "worker", HYAGENTS_MAIN: "w1:p1" });
+  assert.deepEqual(pane.env, { HYBRID_SUBAGENTS_ROLE: "worker", HYBRID_SUBAGENTS_MAIN: "w1:p1" });
   assert.equal(pane.cwd, "/repo");
   assert.deepEqual(herdr.starts[0], {
     name: "worker-1", kind: "codex", pane: "w1:p2",
@@ -62,7 +62,7 @@ test("later specialists stack below with equal heights and skip names herdr alre
 
 test("start refuses outside herdr, inside a specialist, and without a valid role or task", async () => {
   await assert.rejects(start({ ...deps, env: { ...env, HERDR_ENV: undefined } }, { role: "worker", task: "x" }), (error: HyError) => error.code === "not_in_herdr");
-  await assert.rejects(start({ ...deps, env: { ...env, HYAGENTS_ROLE: "worker" } }, { role: "worker", task: "x" }), (error: HyError) => error.code === "specialist");
+  await assert.rejects(start({ ...deps, env: { ...env, HYBRID_SUBAGENTS_ROLE: "worker" } }, { role: "worker", task: "x" }), (error: HyError) => error.code === "specialist");
   await assert.rejects(start(deps, { role: "planner", task: "x" }), /Unknown role "planner"/);
   await assert.rejects(start(deps, { role: "scout", task: "  " }), (error: HyError) => error.code === "task_missing");
   assert.equal(herdr.panes.size, 1);

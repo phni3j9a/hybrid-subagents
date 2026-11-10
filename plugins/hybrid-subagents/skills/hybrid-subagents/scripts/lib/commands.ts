@@ -19,7 +19,7 @@ import {
 import { HyError, oneLine, sleep, writeFileAtomic } from "./util.ts";
 
 export const START_TIMEOUT_MS = 90_000;
-const ENTRY = fileURLToPath(new URL("../hyagents.ts", import.meta.url));
+const ENTRY = fileURLToPath(new URL("../hybrid-subagents.ts", import.meta.url));
 
 export interface Deps {
   env: NodeJS.ProcessEnv;
@@ -32,7 +32,7 @@ export interface Deps {
 export interface MainContext { mainPane: string; socketPath: string; dir: string }
 
 export function mainContext(env: NodeJS.ProcessEnv): MainContext {
-  if (env.HYAGENTS_ROLE) throw new HyError("specialist", `This agent is the Hybrid Subagents ${env.HYAGENTS_ROLE}; specialists do not delegate.`);
+  if (env.HYBRID_SUBAGENTS_ROLE) throw new HyError("specialist", `This agent is the Hybrid Subagents ${env.HYBRID_SUBAGENTS_ROLE}; specialists do not delegate.`);
   if (env.HERDR_ENV !== "1") throw new HyError("not_in_herdr", "Hybrid Subagents runs only inside a herdr pane (HERDR_ENV=1). Do the work directly.");
   if (!env.HERDR_PANE_ID || !env.HERDR_SOCKET_PATH) throw new HyError("not_in_herdr", "HERDR_PANE_ID or HERDR_SOCKET_PATH is missing; start this agent inside herdr.");
   return { mainPane: env.HERDR_PANE_ID, socketPath: env.HERDR_SOCKET_PATH, dir: mainDir(env.HERDR_SOCKET_PATH, env.HERDR_PANE_ID, env) };
@@ -79,7 +79,7 @@ export async function start(deps: Deps, options: StartOptions) {
   const cwd = path.resolve(options.cwd ?? deps.cwd);
   const roleConfig = loadConfig(cwd, env).roles[role];
   const invalid = roleErrors(role, roleConfig);
-  if (invalid.length) throw new HyError("config_invalid", `${invalid.join(" ")} Fix it with the hyagents-models skill.`);
+  if (invalid.length) throw new HyError("config_invalid", `${invalid.join(" ")} Fix it with the hybrid-subagents-models skill.`);
   const ctx = mainContext(env);
 
   // Reserve the name and pane under the lock; the slow agent start runs outside it.
@@ -92,7 +92,7 @@ export async function start(deps: Deps, options: StartOptions) {
     const root = await herdr.layoutExport(ctx.mainPane).then((layout) => layout.root, () => undefined);
     const plan = planSplit(root, ctx.mainPane, existing.map((child) => child.paneId));
     const pane = await herdr.paneSplit(plan.target, {
-      direction: plan.direction, ratio: plan.ratio, cwd, env: { HYAGENTS_ROLE: role, HYAGENTS_MAIN: ctx.mainPane },
+      direction: plan.direction, ratio: plan.ratio, cwd, env: { HYBRID_SUBAGENTS_ROLE: role, HYBRID_SUBAGENTS_MAIN: ctx.mainPane },
     });
     const files = turnFiles(ctx.dir, name, role, 1);
     const child: ChildRecord = {
@@ -124,7 +124,7 @@ export async function start(deps: Deps, options: StartOptions) {
     if (!passed.ok) {
       deps.wakeWatcher(ctx.dir);
       throw new HyError("startup_blocked",
-        `${record.name} (${roleConfig.runtime}) is waiting at a screen Hybrid Subagents does not recognize. Ask the user to handle it in that pane, then run "hyagents send ${record.name}" to deliver the task, or close it.`,
+        `${record.name} (${roleConfig.runtime}) is waiting at a screen Hybrid Subagents does not recognize. Ask the user to handle it in that pane, then run "hybrid-subagents send ${record.name}" to deliver the task, or close it.`,
         { name: record.name, pane: record.paneId, screen: tail(passed.screen) });
     }
     agent = passed.agent;
@@ -312,7 +312,7 @@ export async function doctor(deps: Deps) {
   add("node", major > 22 || (major === 22 && minor >= 19), `Node.js ${process.versions.node} (22.19 or later required)`);
   add("herdr pane", env.HERDR_ENV === "1" && !!env.HERDR_PANE_ID && !!env.HERDR_SOCKET_PATH,
     env.HERDR_ENV === "1" ? `pane ${env.HERDR_PANE_ID ?? "?"}` : "not inside herdr (HERDR_ENV is not 1)");
-  if (env.HYAGENTS_ROLE) add("role", false, `this agent is the ${env.HYAGENTS_ROLE} specialist; specialists do not delegate`);
+  if (env.HYBRID_SUBAGENTS_ROLE) add("role", false, `this agent is the ${env.HYBRID_SUBAGENTS_ROLE} specialist; specialists do not delegate`);
   const version = await herdr.version().catch(() => undefined);
   add("herdr", !!version, version ?? "herdr is not on PATH");
   let config;

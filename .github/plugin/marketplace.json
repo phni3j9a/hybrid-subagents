@@ -9,7 +9,7 @@
       "name": "hybrid-subagents",
       "source": "./plugins/hybrid-subagents",
       "description": "Role-based, multi-vendor specialists that run as Claude Code, Codex or Copilot CLI agents in herdr panes.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     }
   ]
 }

@@ -9,7 +9,7 @@ import { ROLES, modelSpec, type RoleName } from "../src/models.ts";
 import { saveSelection } from "../src/native-settings.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-runtime-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-runtime-"));
 const agentDir = path.join(fixture, "agent");
 mkdirSync(agentDir);
 process.env.PI_CODING_AGENT_DIR = agentDir;
@@ -66,7 +66,7 @@ test("installed package discovery preserves builtins and registers four namespac
 for (const name of Object.keys(ROLES) as RoleName[]) {
   test(`${name}: real native discovery and preflight retain model, thinking and permissions without a guard`, async () => {
     const result = await resolveSubagentLaunchContract({
-      agent: name, cwd: fixture, parentSessionId: "hyagents-test", task: "Inspect the assignment.",
+      agent: name, cwd: fixture, parentSessionId: "hybrid-subagents-test", task: "Inspect the assignment.",
       availableModels: Object.values(ROLES).map(({ provider, id }) => getModels(provider).find((model) => model.id === id)!),
     });
     assert.ok(result.ok, JSON.stringify(result));
@@ -74,7 +74,7 @@ for (const name of Object.keys(ROLES) as RoleName[]) {
     assert.equal(contract.model?.replace(/:(max|xhigh|high)$/, ""), modelSpec(name).replace(/:(max|xhigh|high)$/, ""));
     assert.equal(contract.thinking, ROLES[name].thinking);
     assert.equal(contract.tools.explicitAllowlist, false);
-    assert.ok(!contract.tools.requiredExtensionIds.includes("hyagents.models"));
+    assert.ok(!contract.tools.requiredExtensionIds.includes("hybrid-subagents.models"));
     assert.equal(contract.context, "fresh");
     assert.equal(contract.inheritProjectContext, true);
   });
@@ -103,16 +103,16 @@ function launch(name: string, model: string, fast = false) {
 }
 
 test("per-run model and thinking overrides are left to the native runtime", async () => {
-  const result = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, model: "openai-codex/gpt-6.1-sol:low" });
+  const result = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, model: "openai-codex/gpt-6.1-sol:low" });
   assert.ok(result.ok);
   assert.equal(result.contract.thinking, "low");
-  const child = await factory.create(launch("hyagents.worker", result.contract.model!));
+  const child = await factory.create(launch("hybrid-subagents.worker", result.contract.model!));
   assert.equal(child.modelId, "openai-codex/gpt-6.1-sol");
   await child.dispose();
 });
 
 test("native reviewer schema accepts empty findings and rejects malformed priorities/ranges", () => {
-  const agent = discoverAgents(fixture, "both").agents.find((item) => item.name === "hyagents.reviewer")!;
+  const agent = discoverAgents(fixture, "both").agents.find((item) => item.name === "hybrid-subagents.reviewer")!;
   assert.ok(agent.outputSchema);
   const validator = Compile(agent.outputSchema);
   const correct = { overall_correctness: "correct", explanation: "No actionable defects found.", confidence: 0.8, findings: [] };
@@ -126,7 +126,7 @@ test("native reviewer schema accepts empty findings and rejects malformed priori
 });
 
 test("native thinking ceiling remains authoritative", async () => {
-  const result = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, thinkingCeiling: "high" });
+  const result = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, thinkingCeiling: "high" });
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.code, "thinking_ceiling");
 });
@@ -135,18 +135,18 @@ test("saved choices apply to new real children while retained children keep thei
   const originalSettings = JSON.stringify({ packages: [root] });
   const initial = { provider: "openai-codex", id: "gpt-6.1-sol", thinking: "low" as const };
   try {
-    await saveSelection(fixture, "hyagents.worker", initial, "user");
-    const preflight = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture });
+    await saveSelection(fixture, "hybrid-subagents.worker", initial, "user");
+    const preflight = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture });
     assert.ok(preflight.ok);
     assert.equal(preflight.contract.model, modelSpec(initial));
-    const first = await factory.create({ ...launch("hyagents.worker", modelSpec(initial)), storage: { kind: "dir", sessionDir: path.join(fixture, "configured-sessions") } });
+    const first = await factory.create({ ...launch("hybrid-subagents.worker", modelSpec(initial)), storage: { kind: "dir", sessionDir: path.join(fixture, "configured-sessions") } });
     retainUserTurn(first.sessionId);
     const sessionFile = first.sessionFile!;
     await first.dispose();
-    await saveSelection(fixture, "hyagents.worker", ROLES["hyagents.worker"], "user");
-    const fresh = await factory.create(launch("hyagents.worker", modelSpec("hyagents.worker")));
+    await saveSelection(fixture, "hybrid-subagents.worker", ROLES["hybrid-subagents.worker"], "user");
+    const fresh = await factory.create(launch("hybrid-subagents.worker", modelSpec("hybrid-subagents.worker")));
     await fresh.dispose();
-    const resumed = await factory.create({ ...launch("hyagents.worker", modelSpec(initial)), storage: { kind: "file", sessionFile } });
+    const resumed = await factory.create({ ...launch("hybrid-subagents.worker", modelSpec(initial)), storage: { kind: "file", sessionFile } });
     await resumed.dispose();
   } finally {
     writeFileSync(path.join(agentDir, "settings.json"), originalSettings);
@@ -160,15 +160,15 @@ async function providerPayload(sessionId: string): Promise<Record<string, unknow
 test("native Fast coexists with another host required extension and applies priority only when enabled", async () => {
   const hostPath = path.join(fixture, "host.ts");
   writeFileSync(hostPath, 'export default function(pi) { pi.on("before_provider_request", (event) => ({ ...event.payload, host_probe: true })); }');
-  const host = registerRequiredChildExtensions({ sessionId: "hyagents-fast-test", extensions: [{ id: "other.host", path: hostPath }] });
+  const host = registerRequiredChildExtensions({ sessionId: "hybrid-subagents-fast-test", extensions: [{ id: "other.host", path: hostPath }] });
   try {
     for (const fast of [true, false]) {
-      await saveSelection(fixture, "hyagents.worker", ROLES["hyagents.worker"], "user", fast);
-      const result = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, parentSessionId: "hyagents-fast-test" });
+      await saveSelection(fixture, "hybrid-subagents.worker", ROLES["hybrid-subagents.worker"], "user", fast);
+      const result = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, parentSessionId: "hybrid-subagents-fast-test" });
       assert.ok(result.ok, JSON.stringify(result));
       assert.deepEqual(result.contract.tools.requiredExtensionIds, ["other.host"]);
       const child = await factory.create({
-        ...launch("hyagents.worker", result.contract.model!, fast),
+        ...launch("hybrid-subagents.worker", result.contract.model!, fast),
         extensionPaths: [...result.contract.tools.extensionArgs, hostPath],
         requiredExtensions: [{ id: "other.host", path: hostPath }],
       });
@@ -184,8 +184,8 @@ test("native Fast coexists with another host required extension and applies prio
 });
 
 test("native Fast rejects openai and other unsupported providers", async () => {
-  for (const model of ["openai/gpt-6.1-sol:high", modelSpec("hyagents.designer")]) {
-    const result = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, model, fast: true });
+  for (const model of ["openai/gpt-6.1-sol:high", modelSpec("hybrid-subagents.designer")]) {
+    const result = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, model, fast: true });
     assert.equal(result.ok, false);
     if (!result.ok) assert.match(result.message, /[Ff]ast/);
   }
@@ -193,11 +193,11 @@ test("native Fast rejects openai and other unsupported providers", async () => {
 
 test("backup relaunch: per-run backup model needs fast:false when the role uses Fast", async () => {
   try {
-    await saveSelection(fixture, "hyagents.worker", ROLES["hyagents.worker"], "user", true);
-    const backup = modelSpec("hyagents.designer");
-    const rejected = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, model: backup });
+    await saveSelection(fixture, "hybrid-subagents.worker", ROLES["hybrid-subagents.worker"], "user", true);
+    const backup = modelSpec("hybrid-subagents.designer");
+    const rejected = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, model: backup });
     assert.equal(rejected.ok, false);
-    const result = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, model: backup, fast: false });
+    const result = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, model: backup, fast: false });
     assert.ok(result.ok, JSON.stringify(result));
     assert.equal(result.contract.model, backup);
   } finally {

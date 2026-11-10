@@ -5,10 +5,10 @@ import { activeAgent, describeSelection, modelSpec, ROLE_NAMES } from "../src/mo
 import { configuredBackup, configuredFast, configuredSelection } from "../src/native-settings.ts";
 import { backupCommand, modelCommand, modelCompletions } from "../src/model-command.ts";
 
-const policy = readFileSync(new URL("../skills/hyagents/SKILL.md", import.meta.url), "utf8")
+const policy = readFileSync(new URL("../skills/hybrid-subagents/SKILL.md", import.meta.url), "utf8")
   .replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n/, "").trim();
 
-export default function hyagents(pi: ExtensionAPI): void {
+export default function hybridSubagents(pi: ExtensionAPI): void {
   // Background children discover ambient extensions. They must not become another Main.
   if (process.env.PI_SUBAGENT_CHILD === "1") return;
   async function diagnostics(ctx: ExtensionContext): Promise<{ mapping: string[]; issues: string[] }> {
@@ -29,12 +29,12 @@ export default function hyagents(pi: ExtensionAPI): void {
         if (backup) {
           const candidate = ctx.modelRegistry.find(backup.provider, backup.id);
           if (!candidate) lines.push(`${name}: backup missing ${backup.provider}/${backup.id}; update Pi/provider model configuration.`);
-          else if (!getSupportedThinkingLevels(candidate).includes(backup.thinking)) lines.push(`${name}: backup ${backup.thinking} is unsupported; choose a supported value with /hyagents backup.`);
+          else if (!getSupportedThinkingLevels(candidate).includes(backup.thinking)) lines.push(`${name}: backup ${backup.thinking} is unsupported; choose a supported value with /hybrid-subagents backup.`);
           else if (!available.some((item) => item.provider === backup.provider && item.id === backup.id)) lines.push(`${name}: authenticate backup ${backup.provider} in Pi before use.`);
         }
         const model = ctx.modelRegistry.find(role.provider, role.id);
         if (!model) lines.push(`${name}: missing ${role.provider}/${role.id}; update Pi/provider model configuration.`);
-        else if (!getSupportedThinkingLevels(model).includes(role.thinking)) lines.push(`${name}: ${role.thinking} is unsupported; choose a supported value with /hyagents models.`);
+        else if (!getSupportedThinkingLevels(model).includes(role.thinking)) lines.push(`${name}: ${role.thinking} is unsupported; choose a supported value with /hybrid-subagents models.`);
         else if (!available.some((item) => item.provider === role.provider && item.id === role.id)) lines.push(`${name}: authenticate ${role.provider} in Pi before use.`);
       } catch (error) { lines.push(error instanceof Error ? error.message : String(error)); }
     }
@@ -49,17 +49,17 @@ export default function hyagents(pi: ExtensionAPI): void {
 
   pi.on("before_agent_start", async (event, ctx) => {
     if (activeAgent(event.systemPrompt) || !event.systemPromptOptions.selectedTools.some((name) => name === "subagent" || name === "subagents_enable")) return;
-    // Read fresh each turn so a saved backup applies without /reload; invalid entries are reported by /hyagents.
+    // Read fresh each turn so a saved backup applies without /reload; invalid entries are reported by /hybrid-subagents.
     const backups: string[] = [];
     for (const name of ROLE_NAMES) {
-      try { const backup = await configuredBackup(ctx, name); if (backup) backups.push(`- ${name}: ${modelSpec(backup)}`); } catch { /* shown in /hyagents */ }
+      try { const backup = await configuredBackup(ctx, name); if (backup) backups.push(`- ${name}: ${modelSpec(backup)}`); } catch { /* shown in /hybrid-subagents */ }
     }
     // Keep Pi's structured prompt and other extensions' sections (and prompt caching).
-    event.systemPromptOptions.sections.hyagents = backups.length ? `${policy}\n\nConfigured backups:\n${backups.join("\n")}` : policy;
+    event.systemPromptOptions.sections["hybrid-subagents"] = backups.length ? `${policy}\n\nConfigured backups:\n${backups.join("\n")}` : policy;
   });
 
-  pi.registerCommand("hyagents", {
-    description: "Show Hybrid Subagents readiness, or choose role models with /hyagents models",
+  pi.registerCommand("hybrid-subagents", {
+    description: "Show Hybrid Subagents readiness, or choose role models with /hybrid-subagents models",
     getArgumentCompletions: modelCompletions,
     handler: async (args, ctx) => {
       try {
@@ -72,7 +72,7 @@ export default function hyagents(pi: ExtensionAPI): void {
           await backupCommand(trimmed.slice(6), ctx);
           return;
         }
-        if (trimmed) { ctx.ui.notify("Usage: /hyagents [models [worker|scout|reviewer|designer|reset] | backup [worker|scout|reviewer|designer]]", "error"); return; }
+        if (trimmed) { ctx.ui.notify("Usage: /hybrid-subagents [models [worker|scout|reviewer|designer|reset] | backup [worker|scout|reviewer|designer]]", "error"); return; }
         const { mapping, issues } = await diagnostics(ctx);
         ctx.ui.notify([...mapping, "", ...(issues.length ? issues : ["Model registry and authentication configuration ready. Live provider access is checked when each child runs."])].join("\n"), issues.length ? "warning" : "info");
       } catch (error) { ctx.ui.notify(error instanceof Error ? error.message : String(error), "error"); }

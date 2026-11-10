@@ -1,10 +1,10 @@
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 
 export const ROLES = {
-  "hyagents.worker": { provider: "openai-codex", id: "gpt-6-luna", thinking: "max" },
-  "hyagents.scout": { provider: "openai-codex", id: "gpt-6-luna", thinking: "xhigh" },
-  "hyagents.reviewer": { provider: "openai-codex", id: "gpt-6.1-sol", thinking: "high" },
-  "hyagents.designer": { provider: "anthropic", id: "claude-opus-5-5", thinking: "high" },
+  "hybrid-subagents.worker": { provider: "openai-codex", id: "gpt-6-luna", thinking: "max" },
+  "hybrid-subagents.scout": { provider: "openai-codex", id: "gpt-6-luna", thinking: "xhigh" },
+  "hybrid-subagents.reviewer": { provider: "openai-codex", id: "gpt-6.1-sol", thinking: "high" },
+  "hybrid-subagents.designer": { provider: "anthropic", id: "claude-opus-5-5", thinking: "high" },
 } as const;
 
 export type RoleName = keyof typeof ROLES;
@@ -41,7 +41,7 @@ export function parseSelection(spec: string, thinking?: string): ModelSelection 
   const separator = qualified.indexOf("/");
   const level = match?.[3] ?? thinking;
   if (separator < 1 || separator === qualified.length - 1 || !level || !/^(off|minimal|low|medium|high|xhigh|max)$/.test(level)) {
-    throw new Error(`Hybrid Subagents requires an explicit provider/model and thinking level: ${spec}. Select them with /hyagents models.`);
+    throw new Error(`Hybrid Subagents requires an explicit provider/model and thinking level: ${spec}. Select them with /hybrid-subagents models.`);
   }
   return { provider: qualified.slice(0, separator), id: qualified.slice(separator + 1), thinking: level as Thinking };
 }

@@ -10,7 +10,7 @@ import { HerdrCli } from "./lib/herdr.ts";
 import { HyError } from "./lib/util.ts";
 import { Watcher } from "./lib/watcher.ts";
 
-const USAGE = `Usage: node hyagents.ts <command>
+const USAGE = `Usage: node hybrid-subagents.ts <command>
 
   start --role <worker|scout|reviewer|designer> [--name <name>] [--cwd <dir>]   task on stdin
   send <name>                                    follow-up message on stdin

@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "hybrid-subagents",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Role-based, multi-vendor specialists (worker, scout, reviewer, designer) that run as Claude Code, Codex or Copilot CLI agents in herdr panes.",
   "author": { "name": "phni3j9a" },
   "homepage": "https://github.com/phni3j9a/hybrid-subagents",

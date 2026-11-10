@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { LayoutNode } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/herdr.ts";
-import { MAIN_RATIO, equalizingRatios, planSplit, rebalance } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/layout.ts";
+import type { LayoutNode } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/herdr.ts";
+import { MAIN_RATIO, equalizingRatios, planSplit, rebalance } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/layout.ts";
 import { FakeHerdr } from "./helpers/fake-herdr.ts";
 
 const MAIN = "w1:p1";

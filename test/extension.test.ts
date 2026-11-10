@@ -6,10 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { getModels } from "@earendil-works/pi-ai/compat";
-import hyagents from "../extensions/hyagents.ts";
+import hybridSubagents from "../extensions/hybrid-subagents.ts";
 import { ROLES } from "../src/models.ts";
 
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-extension-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-extension-"));
 const agentDir = path.join(fixture, "agent");
 mkdirSync(agentDir);
 process.env.PI_CODING_AGENT_DIR = agentDir;
@@ -38,7 +38,7 @@ function harness() {
       getAll: () => models,
     },
   } as unknown as ExtensionContext;
-  hyagents(pi);
+  hybridSubagents(pi);
   return { pi, ctx, handlers, commands, notifications };
 }
 
@@ -50,8 +50,8 @@ test("automatically applies policy on every Main turn without replacing other pr
       const event = { systemPrompt: "Pi Main", systemPromptOptions: { selectedTools: [tool], sections: { existing: "preserve" } as Record<string, string> } };
       assert.equal(await h.handlers.get("before_agent_start")!(event, h.ctx), undefined);
       assert.equal(event.systemPromptOptions.sections.existing, "preserve");
-      assert.match(event.systemPromptOptions.sections.hyagents, /hyagents.worker/);
-      assert.match(event.systemPromptOptions.sections.hyagents, /entirely Main's decision/);
+      assert.match(event.systemPromptOptions.sections["hybrid-subagents"], /hybrid-subagents.worker/);
+      assert.match(event.systemPromptOptions.sections["hybrid-subagents"], /entirely Main's decision/);
     }
     assert.equal(h.notifications.length, 0);
   } finally { h.handlers.get("session_shutdown")?.(); }
@@ -59,7 +59,7 @@ test("automatically applies policy on every Main turn without replacing other pr
 
 test("no Main policy when the subagent tool is disabled or in a child prompt", async () => {
   const h = harness();
-  for (const [prompt, tools] of [["Pi Main", []], ['<active_agent name="hyagents.worker"/>\nchild', ["subagent"]]] as const) {
+  for (const [prompt, tools] of [["Pi Main", []], ['<active_agent name="hybrid-subagents.worker"/>\nchild', ["subagent"]]] as const) {
     const event = { systemPrompt: prompt, systemPromptOptions: { selectedTools: tools, sections: {} } };
     await h.handlers.get("before_agent_start")!(event, h.ctx);
     assert.deepEqual(event.systemPromptOptions.sections, {});
@@ -78,7 +78,7 @@ test("another host owns required child extensions without blocking policy or sta
     assert.equal(h.handlers.has("tool_call"), false);
     const event = { systemPrompt: "Pi Main", systemPromptOptions: { selectedTools: ["subagent"], sections: {} as Record<string, string> } };
     await h.handlers.get("before_agent_start")!(event, h.ctx);
-    assert.match(event.systemPromptOptions.sections.hyagents, /hyagents.worker/);
+    assert.match(event.systemPromptOptions.sections["hybrid-subagents"], /hybrid-subagents.worker/);
     assert.equal(h.notifications.length, 0);
   } finally { owner.dispose(); }
 });
@@ -104,31 +104,31 @@ test("missing runtime and authentication produce actionable diagnostics without 
     await h.handlers.get("session_start")!({}, h.ctx);
     assert.match(h.notifications.join("\n"), /bundled pi-subagents is not loaded/);
     assert.match(h.notifications.join("\n"), /authenticate anthropic/);
-    await h.commands.get("hyagents").handler("", h.ctx);
-    assert.match(h.notifications.at(-1)!, /hyagents.worker: openai-codex\/gpt-6-luna:max/);
+    await h.commands.get("hybrid-subagents").handler("", h.ctx);
+    assert.match(h.notifications.at(-1)!, /hybrid-subagents.worker: openai-codex\/gpt-6-luna:max/);
   } finally { h.handlers.get("session_shutdown")?.(); }
 });
 
 test("diagnostics read the saved backup fresh and report registry and authentication problems", async () => {
   const h = harness();
-  const file = path.join(agentDir, "hyagents.json");
+  const file = path.join(agentDir, "hybrid-subagents.json");
   const original = "{}";
-  const save = (backupModel: string) => writeFileSync(file, JSON.stringify({ backupModels: { "hyagents.worker": backupModel } }));
+  const save = (backupModel: string) => writeFileSync(file, JSON.stringify({ backupModels: { "hybrid-subagents.worker": backupModel } }));
   try {
     save("unknown/missing:high");
-    await h.commands.get("hyagents").handler("", h.ctx);
+    await h.commands.get("hybrid-subagents").handler("", h.ctx);
     assert.match(h.notifications.at(-1)!, /backup: unknown\/missing:high/);
     assert.match(h.notifications.at(-1)!, /backup missing unknown\/missing/);
     save("openai-codex/gpt-6.1-sol:high");
     h.ctx.modelRegistry.getAvailable = () => [];
-    await h.commands.get("hyagents").handler("", h.ctx);
+    await h.commands.get("hybrid-subagents").handler("", h.ctx);
     assert.match(h.notifications.at(-1)!, /backup: openai-codex\/gpt-6.1-sol:high/);
     assert.match(h.notifications.at(-1)!, /authenticate backup openai-codex/);
     const event = { systemPrompt: "Pi Main", systemPromptOptions: { selectedTools: ["subagent"], sections: {} as Record<string, string> } };
     await h.handlers.get("before_agent_start")!(event, h.ctx);
-    assert.match(event.systemPromptOptions.sections.hyagents, /Configured backups:\n- hyagents\.worker: openai-codex\/gpt-6\.1-sol:high$/, "Main sees the saved backup without /reload");
+    assert.match(event.systemPromptOptions.sections["hybrid-subagents"], /Configured backups:\n- hybrid-subagents\.worker: openai-codex\/gpt-6\.1-sol:high$/, "Main sees the saved backup without /reload");
     writeFileSync(file, original);
     await h.handlers.get("before_agent_start")!(event, h.ctx);
-    assert.doesNotMatch(event.systemPromptOptions.sections.hyagents, /Configured backups:\n/);
+    assert.doesNotMatch(event.systemPromptOptions.sections["hybrid-subagents"], /Configured backups:\n/);
   } finally { writeFileSync(file, original); }
 });

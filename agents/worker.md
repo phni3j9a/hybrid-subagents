@@ -1,6 +1,6 @@
 ---
 name: worker
-package: hyagents
+package: hybrid-subagents
 description: Implementation, fixes and refactoring, including local investigation and focused tests.
 advertise: true
 model: openai-codex/gpt-6-luna:max

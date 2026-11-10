@@ -1,6 +1,6 @@
 ---
 name: designer
-package: hyagents
+package: hybrid-subagents
 description: UI/UX design and visual implementation, including screens and components.
 advertise: true
 model: anthropic/claude-opus-5-5:high

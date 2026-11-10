@@ -85,7 +85,7 @@ export class HerdrCli implements Herdr {
   bin: string;
   socketPath: string | undefined;
   constructor(env: NodeJS.ProcessEnv = process.env) {
-    this.bin = env.HYAGENTS_HERDR_BIN || "herdr";
+    this.bin = env.HYBRID_SUBAGENTS_HERDR_BIN || "herdr";
     this.socketPath = env.HERDR_SOCKET_PATH;
   }
 
@@ -196,7 +196,7 @@ export class HerdrCli implements Herdr {
       let buffer = "";
       const timer = setTimeout(() => { socket.destroy(); reject(new HerdrError("timeout", `${method} timed out`)); }, timeoutMs);
       socket.setEncoding("utf8");
-      socket.on("connect", () => socket.write(`${JSON.stringify({ id: `hyagents:${method}`, method, params })}\n`));
+      socket.on("connect", () => socket.write(`${JSON.stringify({ id: `hybrid-subagents:${method}`, method, params })}\n`));
       socket.on("data", (chunk: string) => {
         buffer += chunk;
         const end = buffer.indexOf("\n");
@@ -224,7 +224,7 @@ export class HerdrCli implements Herdr {
         if (started) onClose(error); else reject(error ?? new HerdrError("herdr_socket_closed", "subscription closed before it started"));
       };
       socket.setEncoding("utf8");
-      socket.on("connect", () => socket.write(`${JSON.stringify({ id: "hyagents:events", method: "events.subscribe", params: { subscriptions } })}\n`));
+      socket.on("connect", () => socket.write(`${JSON.stringify({ id: "hybrid-subagents:events", method: "events.subscribe", params: { subscriptions } })}\n`));
       socket.on("data", (chunk: string) => {
         buffer += chunk;
         for (let end = buffer.indexOf("\n"); end >= 0; end = buffer.indexOf("\n")) {

@@ -3,12 +3,12 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, beforeEach, test } from "node:test";
-import { configReset, configSet, configShow } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/commands.ts";
-import { DEFAULT_ROLES, loadConfig, userConfigPath } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/config.ts";
-import { runtimeArgs } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/runtimes.ts";
-import { HyError } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/util.ts";
+import { configReset, configSet, configShow } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/commands.ts";
+import { DEFAULT_ROLES, loadConfig, userConfigPath } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/config.ts";
+import { runtimeArgs } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/runtimes.ts";
+import { HyError } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/util.ts";
 
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-plugin-config-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-plugin-config-"));
 const project = path.join(fixture, "repo");
 const nested = path.join(project, "packages", "app");
 const env = { XDG_CONFIG_HOME: path.join(fixture, "config") };
