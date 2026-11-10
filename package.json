@@ -27,10 +27,15 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions/hyagents.ts"
+      "./extensions/hyagents.ts",
+      "./node_modules/pi-subagents/bundle/index.js"
     ],
     "skills": [
-      "./skills"
+      "./skills",
+      "./node_modules/pi-subagents/skills"
+    ],
+    "prompts": [
+      "./node_modules/pi-subagents/prompts"
     ]
   },
   "pi-subagents": {
@@ -45,17 +50,20 @@
     "prepublishOnly": "npm run check"
   },
   "dependencies": {
-    "pi-subagents": "0.76.1"
+    "pi-subagents": "0.87.0"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*"
   },
   "devDependencies": {
-    "@earendil-works/pi-ai": "1.1.0",
-    "@earendil-works/pi-coding-agent": "1.1.0",
+    "@earendil-works/pi-ai": "1.5.0",
+    "@earendil-works/pi-coding-agent": "1.5.0",
     "@types/node": "^22.19.0",
     "typebox": "1.3.27",
     "typescript": "^5.9.3"
-  }
+  },
+  "bundleDependencies": [
+    "pi-subagents"
+  ]
 }

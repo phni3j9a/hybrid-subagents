@@ -31,7 +31,8 @@ SOFTWARE.
 ## Runtime dependencies
 
 Pi and pi-subagents are MIT-licensed upstream dependencies, not Hybrid Subagents forks.
-Their licenses and those of transitive dependencies ship with the installed packages.
+Pi is provided by the host. pi-subagents is bundled unmodified in the published package (`bundleDependencies`), together with its own dependencies. Each bundled package keeps its license file under `node_modules/`.
 
-- Pi 1.1.0: https://github.com/earendil-works/pi (inspected source f1b2e77f5b13b2a199b1052cb79c235451afe7d7)
-- pi-subagents 0.76.1: https://github.com/nicobailon/pi-subagents (inspected source ad11b7ab1b09abd9a6ebdeff032f9c7279c606fc)
+- Pi 1.5.0: https://github.com/earendil-works/pi
+- pi-subagents 0.87.0 (MIT, Copyright (c) 2026 Nico Bailon): https://github.com/nicobailon/pi-subagents
+- Bundled with pi-subagents: jiti (MIT), undici (MIT), acorn (MIT), yaml (ISC), @js-temporal/polyfill (ISC), jsbi (Apache-2.0)

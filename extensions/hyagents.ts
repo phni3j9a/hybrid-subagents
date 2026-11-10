@@ -15,7 +15,7 @@ export default function hyagents(pi: ExtensionAPI): void {
     const lines: string[] = [];
     const mapping: string[] = [];
     if (!pi.getAllTools().some((tool) => tool.name === "subagent")) {
-      lines.push("pi-subagents is not loaded. Run: pi install npm:pi-subagents@0.76.1, then /reload.");
+      lines.push("The bundled pi-subagents is not loaded. Reinstall pi-hybrid-subagents and check that package filtering keeps its extensions, then /reload.");
     }
     const available = ctx.modelRegistry.getAvailable();
     for (const name of ROLE_NAMES) {
