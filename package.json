@@ -1,6 +1,6 @@
 {
   "name": "pi-hybrid-subagents",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Hybrid Subagents for Pi: role-based, multi-model specialists powered by pi-subagents",
   "type": "module",
   "license": "MIT",
