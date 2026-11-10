@@ -7,13 +7,17 @@ import { modelSpec, parseSelection, supportsFast, type ModelSelection, type Role
 
 export type SettingsScope = "user" | "project";
 
-// Use the pinned runtime's locked, atomic settings merge and project-root resolver.
+// Internal modules of the bundled pi-subagents (exact version, so the paths are fixed): the same code the loaded subagent tool runs.
+const piSubagentsRoot = new URL("../", import.meta.resolve("pi-subagents/agents"));
+function internal<T>(file: string): Promise<T> {
+  return import(new URL(`src/${file}.js`, piSubagentsRoot).href);
+}
+
+// Use the bundled runtime's locked, atomic settings merge and project-root resolver.
 type NativeSettings = Pick<typeof import("../node_modules/pi-subagents/src/agents/agents.js"), "mergeBuiltinAgentOverride" | "findConfiguredProjectRoot" | "discoverAgents">;
 let nativeSettings: Promise<NativeSettings> | undefined;
 function native(): Promise<NativeSettings> {
-  const entry = import.meta.resolve("pi-subagents/agents");
-  const ext = entry.endsWith(".ts") ? "ts" : "js";
-  return nativeSettings ??= import(new URL(`../agents/agents.${ext}`, entry).href);
+  return nativeSettings ??= internal("agents/agents");
 }
 
 async function prepareScope(cwd: string, scope: SettingsScope): Promise<NativeSettings> {
@@ -26,8 +30,7 @@ async function prepareScope(cwd: string, scope: SettingsScope): Promise<NativeSe
 // Backups live in our own hyagents.json: pi-subagents 0.85+ rejects unknown agentOverrides fields such as backupModel.
 // Same lease and project-root resolution as pi-subagents.
 function shared<T>(name: string): Promise<T> {
-  const entry = import.meta.resolve("pi-subagents/agents");
-  return import(new URL(`../shared/${name}.${entry.endsWith(".ts") ? "ts" : "js"}`, entry).href);
+  return internal(`shared/${name}`);
 }
 
 async function backupFile(cwd: string, scope: SettingsScope): Promise<string | undefined> {

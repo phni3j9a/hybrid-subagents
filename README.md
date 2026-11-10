@@ -2,7 +2,7 @@
 
 役割ごとに異なるモデル・プロバイダーを組み合わせて使う専門Agent集です。Pi向けパッケージ **`pi-hybrid-subagents`** と、herdr上のClaude Code・Codex・GitHub Copilot CLIで使うプラグイン **`hybrid-subagents`**（下記「herdr版」）を提供します。
 
-Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じて使い分ける軽量パッケージです。OMPの委任・レビュー方針を参考にし、起動、並列実行、結果回収、セッション継続は **pi-subagents** に任せます。
+Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じて使い分ける軽量パッケージです。OMPの委任・レビュー方針を参考にし、起動、並列実行、結果回収、セッション継続はパッケージに同梱した **pi-subagents** に任せます。
 
 旧称はHyAgentsです。既存設定・保持セッションとの互換性のため、コマンド `/hyagents`、Agent名 `hyagents.*`、Skill名 `hyagents`は維持します。モデル・Thinkingの既存設定もそのまま使えます。Fastの旧独自設定については下記の更新時の注意を参照してください。
 
@@ -22,19 +22,24 @@ Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではO
 
 ## インストール
 
-検証対象: **Pi 1.1.0 / pi-subagents 0.76.1 / Node.js 22.19以上**。旧 `@mariozechner/*` 世代のPiは対象外です。
+検証対象: **Pi 1.5.0 / pi-subagents 0.87.0（同梱）/ Node.js 22.19以上**。旧 `@mariozechner/*` 世代のPiは対象外です。
 
 Piが未導入なら、先に導入します。
 
 ```sh
-npm install -g @earendil-works/pi-coding-agent@1.1.0
+npm install -g @earendil-works/pi-coding-agent@1.5.0
 ```
 
-次の2つをPiパッケージとして登録してください。
+Hybrid SubagentsだけをPiパッケージとして登録してください。pi-subagentsは同梱されているため、別にインストールする必要はありません。
 
 ```sh
-pi install npm:pi-subagents@0.76.1
 pi install npm:pi-hybrid-subagents
+```
+
+**pi-subagentsを別に登録している場合は外してください。** 両方あるとPiが `Tool "subagent" conflicts with ...` を報告します。`subagents` 配下の設定はそのまま使えます。
+
+```sh
+pi remove npm:pi-subagents
 ```
 
 未公開の最新版を試す場合は、`npm:pi-hybrid-subagents` の代わりに `git:github.com/phni3j9a/hybrid-subagents` を指定します。Pi 1.2では、Hybrid Subagentsだけを更新する場合は `pi update npm:pi-hybrid-subagents`、全パッケージを更新する場合は `pi update --extensions` を使います（`pi update` 単独はPi本体の更新です）。
@@ -48,7 +53,7 @@ pi install npm:pi-hybrid-subagents
 
 起動中なら `/reload`、そうでなければ通常どおり `pi` を起動します。**毎回 `/hyagents` やSkillを呼び出す必要はありません。** 4つのAgentはパッケージのmanifestから発見され、Mainへ委任方針が自動適用されます。
 
-`pi-subagents` はHybrid Subagentsの依存パッケージにも含まれますが、これは設定の解決APIと設定エディターを読み込むためです。依存関係のインストールだけでは `subagent` ツールが有効にならないため、上記の `pi install npm:pi-subagents@0.76.1` も必要です。二重にExtensionを読み込ませる必要はありません。
+同梱したpi-subagentsの拡張（`subagent` ツール・スラッシュコマンド）、Skill（`pi-subagents`、`council-mode`）、プロンプトは、Hybrid Subagentsのmanifestから読み込まれます。Hybrid Subagentsの設定処理も同じコピーを使うため、実際に動く版と常に一致します。pi-subagentsを新しい版へ更新するには、それを同梱したHybrid Subagentsのリリースを待ち、`pi update npm:pi-hybrid-subagents` してください。
 
 各プロバイダーの認証はPiの通常の方法で設定してください。Hybrid Subagentsは認証情報を管理しません。モデル設定はユーザーが保存操作を行った場合にだけ更新します。
 
@@ -61,7 +66,7 @@ pi install npm:pi-hybrid-subagents
 
 `/hyagents` は登録モデルと認証設定の準備状況を表示します。APIへの試験リクエストは送らないため、利用権限、期限切れの認証、利用枠の最終確認は実際の子Agent起動時に行われます。モデルが見つからなければPiやモデルカタログを更新してください。
 
-プロジェクト限定で使用する場合は、両方の `pi install` に `--local` を付け、Piの通常のプロジェクト信頼設定に従ってください。
+プロジェクト限定で使用する場合は、`pi install` に `--local` を付け、Piの通常のプロジェクト信頼設定に従ってください。
 
 ## 普段の使い方
 
@@ -276,7 +281,7 @@ Mainへの適用にはPiの構造化prompt sectionを使い、他のExtensionの
 
 Hybrid Subagentsは必須子拡張を登録しません。他のホストExtensionの登録を奪わず、bili等の子拡張・圧縮設定も変更しません。
 
-設定の保存では、固定依存のpi-subagents 0.76.1が使う内部設定エディターを1つのadapterから呼び出します。ファイルロック・原子的保存・他フィールドの維持・プロジェクトルート解決を共有するためです。依存バージョンを更新するときはこのadapterの互換性も確認してください。
+設定の保存では、同梱したpi-subagentsの内部設定エディターを1つのadapter（`src/native-settings.ts`）から呼び出します。ファイルロック・原子的保存・他フィールドの維持・プロジェクトルート解決を共有するためです。依存バージョンを更新するときはこのadapterの互換性も確認してください。
 
 セッション復帰の可否・保持期間・並列実行・Fleet UIはpi-subagents側の仕様と設定に従います。プロセス終了後の復帰をHybrid Subagentsが独自に保証するものではありません。FleetView等のUIは別途利用でき、Hybrid Subagentsには同梱しません。
 
@@ -288,7 +293,7 @@ pi remove npm:pi-hybrid-subagents
 
 GitHubから導入した場合は `pi remove git:github.com/phni3j9a/hybrid-subagents` です。旧名で登録した場合は `pi remove git:github.com/phni3j9a/HyAgents` を使ってください。GitHubの旧URLは新URLへリダイレクトされますが、Piの登録ソース文字列は自動で変わりません。
 
-その後 `/reload` またはPiを再起動します。pi-subagentsは他の用途に引き続き使えます。
+その後 `/reload` またはPiを再起動します。同梱したpi-subagentsも一緒に外れます。引き続き使う場合は `pi install npm:pi-subagents` で別に登録してください。
 
 ## 開発・検証
 

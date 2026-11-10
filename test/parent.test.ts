@@ -5,14 +5,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-test("real Pi loads both packages without a child guard and saves models through its registered command", async () => {
+test("real Pi loads the bundled pi-subagents from this package alone, without a child guard and saves models through its registered command", async () => {
   const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-parent-"));
   const agentDir = path.join(fixture, "agent");
   mkdirSync(agentDir);
   process.env.PI_CODING_AGENT_DIR = agentDir;
   process.env.PI_SUBAGENTS_TEMP_ROOT = path.join(fixture, "runs");
   const root = fileURLToPath(new URL("../", import.meta.url));
-  writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ packages: [path.join(root, "node_modules/pi-subagents"), root], compaction: { enabled: false } }));
+  writeFileSync(path.join(agentDir, "settings.json"), JSON.stringify({ packages: [root], compaction: { enabled: false } }));
   // Fail closed if a regression ever reaches network transport during this offline smoke.
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => { throw new Error("Hybrid Subagents offline test forbids network requests"); };
@@ -24,6 +24,8 @@ test("real Pi loads both packages without a child guard and saves models through
   try {
     await loader.reload();
     assert.deepEqual(loader.getExtensions().errors, []);
+    assert.ok(loader.getSkills().skills.some((skill) => skill.name === "pi-subagents"), "bundled skills load");
+    assert.ok(loader.getPrompts().prompts.some((prompt) => prompt.name === "parallel-review"), "bundled prompts load");
     ({ session } = await createAgentSession({ cwd: fixture, agentDir, modelRuntime: runtime, model: runtime.getModel("openai-codex", "gpt-6.1-sol"), thinkingLevel: "low", settingsManager: settings, resourceLoader: loader, sessionManager: SessionManager.inMemory(fixture) }));
     const errors: string[] = [];
     await session.bindExtensions({ mode: "print", onError: (error) => errors.push(error.error) });

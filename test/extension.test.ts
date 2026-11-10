@@ -102,7 +102,7 @@ test("missing runtime and authentication produce actionable diagnostics without 
   h.ctx.modelRegistry.getAvailable = () => [];
   try {
     await h.handlers.get("session_start")!({}, h.ctx);
-    assert.match(h.notifications.join("\n"), /pi install npm:pi-subagents@0.76.1/);
+    assert.match(h.notifications.join("\n"), /bundled pi-subagents is not loaded/);
     assert.match(h.notifications.join("\n"), /authenticate anthropic/);
     await h.commands.get("hyagents").handler("", h.ctx);
     assert.match(h.notifications.at(-1)!, /hyagents.worker: openai-codex\/gpt-6-luna:max/);
