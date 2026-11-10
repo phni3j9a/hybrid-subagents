@@ -3,13 +3,13 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import { fixLine, initialBrief, promptLine } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/brief.ts";
-import { dialogStep } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/dialogs.ts";
-import { formatNotices } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/notify.ts";
-import { checkReport, loadReviewSchema, reviewErrors } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/report.ts";
-import { hasControlChars } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/util.ts";
+import { fixLine, initialBrief, promptLine } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/brief.ts";
+import { dialogStep } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/dialogs.ts";
+import { formatNotices } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/notify.ts";
+import { checkReport, loadReviewSchema, reviewErrors } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/report.ts";
+import { hasControlChars } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/util.ts";
 
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-plugin-report-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-plugin-report-"));
 after(() => rmSync(fixture, { recursive: true, force: true }));
 
 const finding = { title: "Guard the empty list", body: "Empty input crashes the parser and stops the import.", priority: 1, confidence: 0.8, file_path: "src/a.ts", line_start: 4, line_end: 6 };

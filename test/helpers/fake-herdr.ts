@@ -1,7 +1,7 @@
 import type {
   AgentInfo, AgentStatus, Herdr, HerdrEvent, LayoutDescription, LayoutNode, PaneInfo, SplitOptions, Subscription,
-} from "../../plugins/hybrid-subagents/skills/hyagents/scripts/lib/herdr.ts";
-import { HerdrError } from "../../plugins/hybrid-subagents/skills/hyagents/scripts/lib/herdr.ts";
+} from "../../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/herdr.ts";
+import { HerdrError } from "../../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/herdr.ts";
 
 interface FakePane { id: string; agent?: string; name?: string; status: AgentStatus; seq: number; screen: string; env: Record<string, string>; cwd: string }
 interface Subscriber { subscriptions: Subscription[]; onEvent: (event: HerdrEvent) => void; onClose: (error?: Error) => void; closed: boolean }

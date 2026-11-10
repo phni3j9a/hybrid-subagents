@@ -1,6 +1,6 @@
 ---
 name: scout
-package: hyagents
+package: hybrid-subagents
 description: Read-only code exploration and root-cause investigation when relevant files or dependencies are unknown.
 advertise: true
 model: openai-codex/gpt-6-luna:xhigh

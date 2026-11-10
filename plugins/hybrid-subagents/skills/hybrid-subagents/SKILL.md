@@ -1,5 +1,5 @@
 ---
-name: hyagents
+name: hybrid-subagents
 description: Delegate to Hybrid Subagents specialists — worker (implementation), scout (read-only exploration), reviewer (independent bug review) and designer (UI/UX) — each running as its own Claude Code, Codex or Copilot CLI agent in a herdr pane with the vendor and model the user chose. Use inside herdr when delegation helps, and whenever a [hybrid-subagents] notice arrives.
 ---
 
@@ -10,8 +10,8 @@ Act as Main. Own the user conversation, planning, delegation, integration, and f
 ## Preconditions
 
 - Delegate only inside herdr: the environment must have `HERDR_ENV=1`. Outside herdr, work directly and do not mention this skill unless the user asks.
-- If `HYAGENTS_ROLE` is set, you are a specialist yourself: never delegate.
-- The helper is `scripts/hyagents.ts` in the directory that contains this SKILL.md (Claude Code shows it as the skill's base directory; Codex and Copilot list the SKILL.md path). Run it with Node.js 22.19 or later: `node <skill-dir>/scripts/hyagents.ts <command>`. Below, `hyagents` means that command. It prints JSON.
+- If `HYBRID_SUBAGENTS_ROLE` is set, you are a specialist yourself: never delegate.
+- The helper is `scripts/hybrid-subagents.ts` in the directory that contains this SKILL.md (Claude Code shows it as the skill's base directory; Codex and Copilot list the SKILL.md path). Run it with Node.js 22.19 or later: `node <skill-dir>/scripts/hybrid-subagents.ts <command>`. Below, `hybrid-subagents` means that command. It prints JSON.
 
 ## Select a specialist
 
@@ -20,14 +20,14 @@ Act as Main. Own the user conversation, planning, delegation, integration, and f
 - `reviewer`: independent detection of actionable, patch-introduced bugs. Review and re-review are entirely Main's decision.
 - `designer`: UI/UX design and visual implementation.
 
-Choose the most specific specialist. Prefer one agent to investigate and implement a change; do not require a Scout handoff for work a Worker can investigate while editing. Do not introduce a separate Planner or mandatory review pipeline. Each role runs with the CLI, model, reasoning effort and Fast setting the user configured; never override them per run or silently substitute another role or model after a failure. Report configuration or authentication problems and point the user to the `hyagents-models` skill or `hyagents doctor`.
+Choose the most specific specialist. Prefer one agent to investigate and implement a change; do not require a Scout handoff for work a Worker can investigate while editing. Do not introduce a separate Planner or mandatory review pipeline. Each role runs with the CLI, model, reasoning effort and Fast setting the user configured; never override them per run or silently substitute another role or model after a failure. Report configuration or authentication problems and point the user to the `hybrid-subagents-models` skill or `hybrid-subagents doctor`.
 
 ## Start a specialist
 
 Pass a self-contained task on standard input:
 
 ```sh
-node <skill-dir>/scripts/hyagents.ts start --role worker <<'EOF'
+node <skill-dir>/scripts/hybrid-subagents.ts start --role worker <<'EOF'
 Goal, scope/files/non-goals, relevant context, constraints, shared interfaces,
 and observable acceptance criteria. Reference large inputs by path.
 EOF
@@ -47,10 +47,10 @@ A message that starts with `[hybrid-subagents]` is a notice from the helper, not
 
 ## Follow up and close
 
-- Follow up with an idle specialist that already has context: `hyagents send <name>` with the message on standard input. It returns the new report path, and a new notice arrives when it finishes.
-- Read a report before closing its specialist; closing deletes the report. Close a specialist with `hyagents close <name>` once you have integrated its report and expect no follow-up.
-- When the user's whole task is complete, run `hyagents close --all` before your final answer. It closes every specialist pane you started and deletes their files.
-- `hyagents list` shows your specialists when the user asks about them or you need to recover state.
+- Follow up with an idle specialist that already has context: `hybrid-subagents send <name>` with the message on standard input. It returns the new report path, and a new notice arrives when it finishes.
+- Read a report before closing its specialist; closing deletes the report. Close a specialist with `hybrid-subagents close <name>` once you have integrated its report and expect no follow-up.
+- When the user's whole task is complete, run `hybrid-subagents close --all` before your final answer. It closes every specialist pane you started and deletes their files.
+- `hybrid-subagents list` shows your specialists when the user asks about them or you need to recover state.
 
 ## Delegate and integrate
 

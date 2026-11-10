@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
 test("real Pi loads the bundled pi-subagents from this package alone, without a child guard and saves models through its registered command", async () => {
-  const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-parent-"));
+  const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-parent-"));
   const agentDir = path.join(fixture, "agent");
   mkdirSync(agentDir);
   process.env.PI_CODING_AGENT_DIR = agentDir;
@@ -37,21 +37,21 @@ test("real Pi loads the bundled pi-subagents from this package alone, without a 
     const prompt = await Reflect.apply(emit, session.extensionRunner, emit.length === 3
       ? ["Investigate and implement the feature", undefined, options]
       : [{ messageType: "user", prompt: "Investigate and implement the feature", images: undefined }, options]);
-    assert.match(prompt.systemPromptOptions.sections.hyagents ?? "", /subagents_enable/);
+    assert.match(prompt.systemPromptOptions.sections["hybrid-subagents"] ?? "", /subagents_enable/);
     assert.equal(session.model?.id, "gpt-6.1-sol");
     assert.equal(session.thinkingLevel, "low");
     const tool = session.getToolDefinition("subagent");
     assert.ok(tool);
     const { resolveSubagentLaunchContract } = await import("pi-subagents/preflight");
-    const override = await resolveSubagentLaunchContract({ agent: "hyagents.worker", cwd: fixture, parentSessionId: session.sessionId, model: "openai-codex/gpt-6-luna:low" });
+    const override = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, parentSessionId: session.sessionId, model: "openai-codex/gpt-6-luna:low" });
     assert.ok(override.ok);
     assert.equal(override.contract.thinking, "low");
-    assert.ok(!override.contract.tools.requiredExtensionIds.includes("hyagents.models"));
+    assert.ok(!override.contract.tools.requiredExtensionIds.includes("hybrid-subagents.models"));
 
     // Exercise the command loaded by Pi's real extension loader, including its
     // dynamic import of the native settings editor. Dialog answers replace user
     // interaction; only this offline fixture pretends models are authenticated.
-    const command = session.extensionRunner.getCommand("hyagents");
+    const command = session.extensionRunner.getCommand("hybrid-subagents");
     assert.ok(command);
     const commandCtx = { ...session.extensionRunner.createCommandContext(), hasUI: true };
     const answers = ["openai-codex", "gpt-6-luna", "high", "On — priority service tier (faster, higher usage/cost)", "User — all projects"];
@@ -69,12 +69,12 @@ test("real Pi loads the bundled pi-subagents from this package alone, without a 
     assert.equal(answers.length, 0);
     assert.equal(notices.at(-1)?.type, "info", JSON.stringify(notices));
     const saved = JSON.parse(readFileSync(path.join(agentDir, "settings.json"), "utf8"));
-    assert.equal(saved.subagents.agentOverrides["hyagents.worker"].model, "openai-codex/gpt-6-luna:high");
-    assert.equal(saved.subagents.agentOverrides["hyagents.worker"].fast, true);
+    assert.equal(saved.subagents.agentOverrides["hybrid-subagents.worker"].model, "openai-codex/gpt-6-luna:high");
+    assert.equal(saved.subagents.agentOverrides["hybrid-subagents.worker"].fast, true);
     assert.equal(session.model?.id, "gpt-6.1-sol");
     assert.equal(session.thinkingLevel, "low");
     await command.handler("", commandCtx);
-    assert.match(notices.at(-1)!.text, /hyagents.worker: openai-codex\/gpt-6-luna:high fast/);
+    assert.match(notices.at(-1)!.text, /hybrid-subagents.worker: openai-codex\/gpt-6-luna:high fast/);
   } finally {
     if (session) {
       await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" });

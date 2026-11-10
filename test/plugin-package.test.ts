@@ -6,15 +6,15 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { after, test } from "node:test";
-import { readPid, wakeWatcher } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/commands.ts";
-import { DEFAULT_ROLES, ROLE_NAMES } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/config.ts";
-import { writeChild, writeMain } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/state.ts";
+import { readPid, wakeWatcher } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/commands.ts";
+import { DEFAULT_ROLES, ROLE_NAMES } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/config.ts";
+import { writeChild, writeMain } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/state.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const plugin = path.join(root, "plugins", "hybrid-subagents");
-const entry = path.join(plugin, "skills", "hyagents", "scripts", "hyagents.ts");
+const entry = path.join(plugin, "skills", "hybrid-subagents", "scripts", "hybrid-subagents.ts");
 const json = (file: string) => JSON.parse(readFileSync(path.join(root, file), "utf8"));
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-plugin-package-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-plugin-package-"));
 after(() => rmSync(fixture, { recursive: true, force: true }));
 
 test("Claude Code, Codex and Copilot manifests and marketplaces describe the same plugin", () => {
@@ -41,8 +41,8 @@ test("skills, roles and the review schema ship inside the plugin; the Pi npm pac
     const text = readFileSync(path.join(plugin, "skills", name, "SKILL.md"), "utf8");
     assert.match(text, new RegExp(`^---\\nname: ${name}\\ndescription: [^\\n"]+\\n`), `${name} frontmatter`);
   }
-  for (const role of ROLE_NAMES) assert.ok(existsSync(path.join(plugin, "skills", "hyagents", "roles", `${role}.md`)), role);
-  assert.ok(existsSync(path.join(plugin, "skills", "hyagents", "schemas", "review.schema.json")));
+  for (const role of ROLE_NAMES) assert.ok(existsSync(path.join(plugin, "skills", "hybrid-subagents", "roles", `${role}.md`)), role);
+  assert.ok(existsSync(path.join(plugin, "skills", "hybrid-subagents", "schemas", "review.schema.json")));
   assert.equal(json("package.json").files.includes("plugins"), false);
 });
 
@@ -112,7 +112,7 @@ console.log(JSON.stringify({ id: "cli", result: group === "pane" ? { pane: info 
     server.listen(socketPath);
   });
   const saved = { ...process.env };
-  Object.assign(process.env, { HERDR_SOCKET_PATH: socketPath, HYAGENTS_HERDR_BIN: bin });
+  Object.assign(process.env, { HERDR_SOCKET_PATH: socketPath, HYBRID_SUBAGENTS_HERDR_BIN: bin });
   try { wakeWatcher(dir); } finally { process.env = saved; }
   const request = await subscribed;
   assert.equal(request.method, "events.subscribe");

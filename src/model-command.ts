@@ -5,7 +5,7 @@ import { configuredBackup, configuredFast, configuredSelection, saveBackup, save
 
 const FAST_CHOICES = ["Off — standard service tier", "On — priority service tier (faster, higher usage/cost)"];
 
-const USAGE = "/hyagents models [worker|scout|reviewer|designer|reset]";
+const USAGE = "/hybrid-subagents models [worker|scout|reviewer|designer|reset]";
 
 async function chooseScope(ctx: ExtensionCommandContext): Promise<SettingsScope | undefined> {
   const choices = ["User — all projects", ...(ctx.isProjectTrusted() ? ["Project — this project only"] : [])];
@@ -47,12 +47,12 @@ export async function modelCommand(args: string, ctx: ExtensionCommandContext): 
     }
     return;
   }
-  let name = target?.startsWith("hyagents.") ? target : target ? `hyagents.${target}` : undefined;
+  let name = target?.startsWith("hybrid-subagents.") ? target : target ? `hybrid-subagents.${target}` : undefined;
   if (name && !isRole(name)) { ctx.ui.notify(`Unknown role. Usage: ${USAGE}`, "error"); return; }
   if (!name) {
     const labels = await Promise.all(ROLE_NAMES.map(async (role) => {
-      try { return `${role.slice(9)} — ${describeSelection(await configuredSelection(role, ctx), await configuredFast(role, ctx))}`; }
-      catch { return `${role.slice(9)} — configuration needs attention`; }
+      try { return `${role.slice(role.indexOf(".") + 1)} — ${describeSelection(await configuredSelection(role, ctx), await configuredFast(role, ctx))}`; }
+      catch { return `${role.slice(role.indexOf(".") + 1)} — configuration needs attention`; }
     }));
     const chosen = await ctx.ui.select("Hybrid Subagents models", labels);
     if (!chosen) return;
@@ -60,7 +60,7 @@ export async function modelCommand(args: string, ctx: ExtensionCommandContext): 
   }
   if (!name || !isRole(name)) return;
   const models = ctx.modelRegistry.getAvailable();
-  if (models.length === 0) { ctx.ui.notify("No configured models. Authenticate a provider in Pi first, then reopen /hyagents models.", "warning"); return; }
+  if (models.length === 0) { ctx.ui.notify("No configured models. Authenticate a provider in Pi first, then reopen /hybrid-subagents models.", "warning"); return; }
   const provider = await ctx.ui.select(`${name} — provider`, [...new Set(models.map((model) => model.provider))].sort());
   if (!provider) return;
   const candidates = models.filter((model) => model.provider === provider).sort((a, b) => a.id.localeCompare(b.id));
@@ -86,16 +86,16 @@ export async function modelCommand(args: string, ctx: ExtensionCommandContext): 
 }
 
 export async function backupCommand(args: string, ctx: ExtensionCommandContext): Promise<void> {
-  if (!ctx.hasUI) { ctx.ui.notify("Model selection requires an interactive or dialog-capable RPC client. Configure backupModels in hyagents.json for headless use.", "warning"); return; }
+  if (!ctx.hasUI) { ctx.ui.notify("Model selection requires an interactive or dialog-capable RPC client. Configure backupModels in hybrid-subagents.json for headless use.", "warning"); return; }
   const parts = args.trim().split(/\s+/).filter(Boolean);
-  const usage = "/hyagents backup [worker|scout|reviewer|designer]";
+  const usage = "/hybrid-subagents backup [worker|scout|reviewer|designer]";
   if (parts.length > 1) { ctx.ui.notify(`Usage: ${usage}`, "error"); return; }
-  let name = parts[0]?.startsWith("hyagents.") ? parts[0] : parts[0] ? `hyagents.${parts[0]}` : undefined;
+  let name = parts[0]?.startsWith("hybrid-subagents.") ? parts[0] : parts[0] ? `hybrid-subagents.${parts[0]}` : undefined;
   if (name && !isRole(name)) { ctx.ui.notify(`Unknown role. Usage: ${usage}`, "error"); return; }
   if (!name) {
     const labels = await Promise.all(ROLE_NAMES.map(async (role) => {
-      try { const backup = await configuredBackup(ctx, role); return `${role.slice(9)} — ${backup ? modelSpec(backup) : "none"}`; }
-      catch { return `${role.slice(9)} — configuration needs attention`; }
+      try { const backup = await configuredBackup(ctx, role); return `${role.slice(role.indexOf(".") + 1)} — ${backup ? modelSpec(backup) : "none"}`; }
+      catch { return `${role.slice(role.indexOf(".") + 1)} — configuration needs attention`; }
     }));
     const chosen = await ctx.ui.select("Hybrid Subagents backups", labels);
     if (!chosen) return;

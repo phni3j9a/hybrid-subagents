@@ -4,10 +4,10 @@ import net from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, test } from "node:test";
-import { HerdrCli, type HerdrEvent } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/herdr.ts";
-import { HyError } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/util.ts";
+import { HerdrCli, type HerdrEvent } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/herdr.ts";
+import { HyError } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/util.ts";
 
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-plugin-herdr-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-plugin-herdr-"));
 after(() => rmSync(fixture, { recursive: true, force: true }));
 
 // A stand-in for the herdr CLI: logs argv and answers like herdr's print_response.
@@ -33,8 +33,8 @@ chmodSync(bin, 0o755);
 const argv = () => readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line) as string[]);
 
 test("CLI commands pass arguments verbatim and parse herdr's JSON responses", async () => {
-  const herdr = new HerdrCli({ HYAGENTS_HERDR_BIN: bin });
-  const pane = await herdr.paneSplit("w1:p1", { direction: "right", ratio: 0.4, cwd: "/my repo", env: { HYAGENTS_ROLE: "worker", HYAGENTS_MAIN: "w1:p1" } });
+  const herdr = new HerdrCli({ HYBRID_SUBAGENTS_HERDR_BIN: bin });
+  const pane = await herdr.paneSplit("w1:p1", { direction: "right", ratio: 0.4, cwd: "/my repo", env: { HYBRID_SUBAGENTS_ROLE: "worker", HYBRID_SUBAGENTS_MAIN: "w1:p1" } });
   assert.equal(pane.pane_id, "w1:p7");
   const agent = await herdr.agentStart("worker-1", "claude", "w1:p7", ["--model", "claude-opus-5-5", "--settings", '{"fastMode":true}'], 90_000);
   assert.equal(agent.name, "worker-1");
@@ -45,13 +45,13 @@ test("CLI commands pass arguments verbatim and parse herdr's JSON responses", as
   assert.equal(await herdr.version(), "herdr 0.9.5");
   await assert.rejects(herdr.agentPrompt("w1:p7", "hello"), (error: HyError) => error.code === "agent_blocked" && error.message === "agent is blocked");
   assert.deepEqual(argv().slice(0, 2), [
-    ["pane", "split", "w1:p1", "--direction", "right", "--cwd", "/my repo", "--no-focus", "--ratio", "0.4", "--env", "HYAGENTS_ROLE=worker", "--env", "HYAGENTS_MAIN=w1:p1"],
+    ["pane", "split", "w1:p1", "--direction", "right", "--cwd", "/my repo", "--no-focus", "--ratio", "0.4", "--env", "HYBRID_SUBAGENTS_ROLE=worker", "--env", "HYBRID_SUBAGENTS_MAIN=w1:p1"],
     ["agent", "start", "worker-1", "--kind", "claude", "--pane", "w1:p7", "--timeout", "90000", "--", "--model", "claude-opus-5-5", "--settings", '{"fastMode":true}'],
   ]);
 });
 
 test("a missing herdr binary is reported clearly", async () => {
-  const herdr = new HerdrCli({ HYAGENTS_HERDR_BIN: path.join(fixture, "nope") });
+  const herdr = new HerdrCli({ HYBRID_SUBAGENTS_HERDR_BIN: path.join(fixture, "nope") });
   await assert.rejects(herdr.version(), (error: HyError) => error.code === "herdr_missing");
 });
 

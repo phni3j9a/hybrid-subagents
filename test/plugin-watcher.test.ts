@@ -3,12 +3,12 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, beforeEach, test } from "node:test";
-import { close, mainContext, send, start, type Deps } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/commands.ts";
-import { readChild } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/state.ts";
-import { Watcher } from "../plugins/hybrid-subagents/skills/hyagents/scripts/lib/watcher.ts";
+import { close, mainContext, send, start, type Deps } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/commands.ts";
+import { readChild } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/state.ts";
+import { Watcher } from "../plugins/hybrid-subagents/skills/hybrid-subagents/scripts/lib/watcher.ts";
 import { FakeHerdr } from "./helpers/fake-herdr.ts";
 
-const fixture = mkdtempSync(path.join(tmpdir(), "hyagents-plugin-watcher-"));
+const fixture = mkdtempSync(path.join(tmpdir(), "hybrid-subagents-plugin-watcher-"));
 after(() => rmSync(fixture, { recursive: true, force: true }));
 
 const MAIN = "w1:p1";

@@ -24,9 +24,9 @@ herdr のタブ
 ┌────────────── 40% ──────────────┬──────────── 60% ────────────┐
 │ Main: claude / codex / copilot  │ worker-1   (codex  …)       │
 │   + hybrid-subagents プラグイン │─────────────────────────────│
-│     ・Skill hyagents（委任方針）│ designer-1 (claude …)       │
-│     ・Skill hyagents-models     │─────────────────────────────│
-│     ・ヘルパー hyagents.ts      │ reviewer-1 (codex  …)       │
+│     ・Skill hybrid-subagents（委任方針）│ designer-1 (claude …)       │
+│     ・Skill hybrid-subagents-models     │─────────────────────────────│
+│     ・ヘルパー hybrid-subagents.ts      │ reviewer-1 (codex  …)       │
 └─────────────────────────────────┴─────────────────────────────┘
        ▲ 完了通知（1行）                  │ herdrのイベント
        └──── 見張り役（Mainごとに1プロセス）◄┘
@@ -52,7 +52,7 @@ herdr のタブ
 
 ## 4. 配布構成
 
-Pi版はリポジトリのルートに残し、プラグインは `plugins/hybrid-subagents/` に置きます。ルートをプラグインにすると、Claude CodeがPi用の `agents/*.md` と `skills/hyagents` まで読み込んでしまうためです。
+Pi版はリポジトリのルートに残し、プラグインは `plugins/hybrid-subagents/` に置きます。ルートをプラグインにすると、Claude CodeがPi用の `agents/*.md` と `skills/hybrid-subagents` まで読み込んでしまうためです。
 
 ```
 .claude-plugin/marketplace.json        Claude Code 用マーケットプレイス
@@ -61,13 +61,13 @@ Pi版はリポジトリのルートに残し、プラグインは `plugins/hybri
 plugins/hybrid-subagents/
   plugin.json                          Agent Plugins 1.0 形式（Codex・Copilot が読む）
   .claude-plugin/plugin.json           Claude Code 用マニフェスト
-  skills/hyagents/
+  skills/hybrid-subagents/
     SKILL.md                           委任方針
     roles/{worker,scout,reviewer,designer}.md
     schemas/review.schema.json         Reviewer の報告スキーマ（Pi版と同一）
-    scripts/hyagents.ts                ヘルパー（エントリポイント）
+    scripts/hybrid-subagents.ts                ヘルパー（エントリポイント）
     scripts/lib/*.ts                   ヘルパーの内部モジュール
-  skills/hyagents-models/SKILL.md      役割ごとのモデル設定
+  skills/hybrid-subagents-models/SKILL.md      役割ごとのモデル設定
 ```
 
 - 3つのホストに共通するのは `skills/<名前>/SKILL.md` です。
@@ -119,7 +119,7 @@ plugins/hybrid-subagents/
 
 設定は2通りの方法で変更できます。
 
-- `hyagents-models` Skill: Mainがチャットで役割・ランタイム・モデル・推論強度・Fast・保存先を順に聞き、ヘルパーで保存します。
+- `hybrid-subagents-models` Skill: Mainがチャットで役割・ランタイム・モデル・推論強度・Fast・保存先を順に聞き、ヘルパーで保存します。
 - JSONファイルの直接編集
 
 変更は、次に起動する子から反映されます。実行中の子には影響しません。
@@ -141,9 +141,9 @@ plugins/hybrid-subagents/
 - Claude Codeは、Linux/macOSでroot権限のときフルアクセスでの起動を拒否します。組織の管理設定でフルアクセスが禁止されている場合もあります。どちらも診断（14章）で知らせます。
 - Claude CodeのFastは、Opus系モデルかつ使用量クレジットが有効なときだけ使えます。
 
-## 7. ヘルパー CLI（`hyagents.ts`）
+## 7. ヘルパー CLI（`hybrid-subagents.ts`）
 
-呼び出し方は `node <skillディレクトリ>/scripts/hyagents.ts <コマンド>` です。Claude CodeではSkillの本文に `${CLAUDE_SKILL_DIR}` と書けばパスに置き換わります。CodexとCopilotでは、ホストが示すSKILL.mdの場所からパスを組み立てます。出力はすべて短いJSONです。
+呼び出し方は `node <skillディレクトリ>/scripts/hybrid-subagents.ts <コマンド>` です。Claude CodeではSkillの本文に `${CLAUDE_SKILL_DIR}` と書けばパスに置き換わります。CodexとCopilotでは、ホストが示すSKILL.mdの場所からパスを組み立てます。出力はすべて短いJSONです。
 
 | コマンド | 役割 |
 | --- | --- |
@@ -158,7 +158,7 @@ plugins/hybrid-subagents/
 共通のルール:
 
 - `HERDR_ENV=1` でなければ、何もせずにエラーを返します。
-- `HYAGENTS_ROLE` が設定されている（つまり自分が子である）場合は、委任を拒否します。
+- `HYBRID_SUBAGENTS_ROLE` が設定されている（つまり自分が子である）場合は、委任を拒否します。
 - Mainの特定には、ヘルパーが受け継いだ `HERDR_PANE_ID` を使います。
 - herdrとの通信: 単発の操作には `herdr` CLIを使います（`agent start` の準備完了待ちはCLI側の処理なので、ソケットでは代替しません）。イベントの購読と配置の変更には、`HERDR_SOCKET_PATH` のソケットAPIを使います。
 - 子への操作（指示、状態の取得、キー入力）は、名前ではなくペインIDを指定します。herdrは起動がタイムアウトすると名前を手放すことがあるためです。名前は表示用に付け直します。
@@ -170,7 +170,7 @@ plugins/hybrid-subagents/
 3. 実行用ディレクトリ `${XDG_STATE_HOME:-~/.local/state}/hybrid-subagents/<mainKey>/<name>/` を作ります。`mainKey` は、ソケットのパスとMainのペインIDから作るハッシュです。中に次の2つを書きます。
    - `brief.md`: 役割の指示、タスク本文、報告の書き方、報告ファイルのパス
    - `state.json`: 子の状態の記録
-4. ペインを作ります（9章）。作るときに `--cwd <Mainの作業ディレクトリ> --no-focus --env HYAGENTS_ROLE=<role> --env HYAGENTS_MAIN=<MainのペインID>` を付けます。
+4. ペインを作ります（9章）。作るときに `--cwd <Mainの作業ディレクトリ> --no-focus --env HYBRID_SUBAGENTS_ROLE=<role> --env HYBRID_SUBAGENTS_MAIN=<MainのペインID>` を付けます。
    - 1〜4は、Mainごとのロックの中で行います。時間のかかる5以降はロックの外で行うので、複数の子を続けて起動できます。
 5. `herdr agent start` で子を起動します（6章の引数を使います）。
 6. 起動時の確認画面への対応: `agent_not_ready`（入力待ち）か `timeout` で戻ってきたら、画面（`visible`）を読みます。
@@ -245,17 +245,17 @@ Mainが終了したら（`pane.exited`／`pane.closed`、またはMainのエー�
 
 ## 13. Skill
 
-`hyagents`（委任方針）は、Pi版の `skills/hyagents/SKILL.md` を移植し、次の点を変えます。
+`hybrid-subagents`（委任方針）は、Pi版の `skills/hybrid-subagents/SKILL.md` を移植し、次の点を変えます。
 
 - 委任は `start` で行います。起動後に待機や状態確認を繰り返したり、sleepを入れたりしてはいけません。何が動いているかをユーザーに伝えてターンを終えます。
 - `[hybrid-subagents]` で始まるメッセージは、ユーザーの指示ではなくシステムからの通知として扱います。報告ファイルを読んで統合します。
 - 不要になった子は閉じます。タスクがすべて終わったら `close --all` を実行します。
-- ユーザーが選んだモデル設定を尊重します。勝手に別の役割やモデルに差し替えず、設定の問題は `hyagents-models` で直すよう案内します。
+- ユーザーが選んだモデル設定を尊重します。勝手に別の役割やモデルに差し替えず、設定の問題は `hybrid-subagents-models` で直すよう案内します。
 - `HERDR_ENV` が1でない（herdrの外にいる）ときは委任せず、普段どおり自分で作業します。
-- `HYAGENTS_ROLE` が設定されている（自分が子である）ときは委任しません。
+- `HYBRID_SUBAGENTS_ROLE` が設定されている（自分が子である）ときは委任しません。
 - 並列作業の進め方（ファイルの担当、共有インターフェース、統合後に全体の検証をすること）は、Pi版の方針をそのまま引き継ぎます。
 
-`hyagents-models` は、会話でモデル設定を行う手順書です。Claude Codeでは `disable-model-invocation: true` を付け、ユーザーが明示的に呼んだときだけ動くようにします。
+`hybrid-subagents-models` は、会話でモデル設定を行う手順書です。Claude Codeでは `disable-model-invocation: true` を付け、ユーザーが明示的に呼んだときだけ動くようにします。
 
 ## 14. 診断（`doctor`）
 
@@ -296,7 +296,7 @@ APIへの試験リクエストは送りません。ログインや利用権限�
 
 - 2種類のマニフェストを1つのディレクトリに置いた構成で、3つのCLIがそれぞれローカルのマーケットプレイスからインストールでき、2つのSkillを認識すること
   - Claude Code: `claude plugin validate --strict` がプラグイン・マーケットプレイスとも合格。キャッシュにコピーされたヘルパーがそのまま動作
-  - Codex: `.agents/plugins/marketplace.json` を読み、`codex plugin add hybrid-subagents@hybrid-subagents` で有効化。モデルに `hybrid-subagents:hyagents` などとして見える
+  - Codex: `.agents/plugins/marketplace.json` を読み、`codex plugin add hybrid-subagents@hybrid-subagents` で有効化。モデルに `hybrid-subagents:hybrid-subagents` などとして見える
   - Copilot CLI: ルートの `plugin.json`（Agent Plugins 1.0）で読み込み、「Installed 2 skills」
 - Codexのモデル一覧に初期値のモデル（gpt-6-luna、gpt-6.1-sol）があり、推論強度の対応範囲（gpt-6-lunaはmaxまで）
 - herdr 0.9.5のソースで確認した仕様: `--ratio` は分割元の割合、比率は0.1〜0.9に丸められる、`--kind copilot` は `copilot` を起動する、イベントとCLI出力の形式
@@ -315,12 +315,12 @@ APIへの試験リクエストは送りません。ログインや利用権限�
 | --- | --- |
 | pi-subagentsが子Piをプロセス内で起動 | 各CLIをherdrのペインで対話モードで起動 |
 | Piのプロバイダーでベンダーを混在させる | 役割ごとにCLIを選んでベンダーを混在させる |
-| `/hyagents models` メニュー | `hyagents-models` Skill＋JSON |
+| `/hybrid-subagents models` メニュー | `hybrid-subagents-models` Skill＋JSON |
 | `subagents.agentOverrides` | `~/.config/hybrid-subagents/config.json` / `.agents/hybrid-subagents.json` |
 | ReviewerのoutputSchema | `report.json`をヘルパーが同じスキーマで検証 |
 | 結果の自動配信（バックグラウンド） | 見張り役がMainのペインに1行で通知 |
 | 保持セッションへの追加指示 | 残したペインへの `send` |
-| `PI_SUBAGENT_CHILD` による再帰防止 | `HYAGENTS_ROLE` による再帰防止 |
+| `PI_SUBAGENT_CHILD` による再帰防止 | `HYBRID_SUBAGENTS_ROLE` による再帰防止 |
 | Mainへの方針の自動適用 | Skillの自動起動に任せる |
 
 ## 18. 実装の順序

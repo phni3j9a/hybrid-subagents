@@ -1,6 +1,6 @@
 ---
 name: reviewer
-package: hyagents
+package: hybrid-subagents
 description: Independent, evidence-backed review of actionable defects introduced by the patch; no automatic edits.
 advertise: true
 model: openai-codex/gpt-6.1-sol:high
