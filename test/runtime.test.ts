@@ -59,6 +59,7 @@ test("installed package discovery preserves builtins and registers four namespac
     assert.equal(agent.tools, undefined, "no extra tool allowlist");
     assert.equal(agent.excludeTools, undefined);
     assert.equal(agent.defaultProgress, false, "no progress/checkpoint files");
+    assert.equal(agent.defaultTimeoutMs, 4 * 60 * 60 * 1000, "4-hour run deadline instead of the 30-minute backstop");
   }
   assert.ok(discovered.agents.some((item) => item.name === "worker" && item.source === "builtin"));
 });
