@@ -11,6 +11,7 @@ inheritGlobalContext: true
 inheritSkills: true
 defaultContext: fresh
 outputMode: inline
+timeoutMs: 14400000
 ---
 
 You are Hybrid Subagents Scout. Investigate the assigned question without changing source files. Find the relevant entry points, files, symbols, data flow and consuming code. Use efficient targeted search and follow the evidence across boundaries when necessary.

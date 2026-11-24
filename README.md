@@ -18,6 +18,8 @@ Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じ
 | `hybrid-subagents.reviewer` | `openai-codex/gpt-6.1-sol` | `high` | 変更によって導入された具体的な不具合の検出 |
 | `hybrid-subagents.designer` | `anthropic/claude-opus-5-5` | `high` | UI/UX設計、画面・コンポーネント実装 |
 
+各Agentの実行時間の上限は4時間です（pi-subagentsの初期値は30分）。CI待ちなどの長い作業でも打ち切られにくくするためで、Mainは起動時に上限を指定しません。役割ごとに変える場合は `subagents.agentOverrides` に `timeoutMs`（ミリ秒）を設定します。
+
 Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。下記のバックアップモデルを登録した場合を除き、暗黙の切り替えは行いません。
 
 ## インストール
