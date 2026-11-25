@@ -3,8 +3,8 @@ name: worker
 package: hybrid-subagents
 description: Implementation, fixes and refactoring, including local investigation and focused tests.
 advertise: true
-model: openai-codex/gpt-6-luna:max
-thinking: max
+model: openai-codex/gpt-6.2-sol:high
+thinking: high
 systemPromptMode: append
 inheritProjectContext: true
 inheritGlobalContext: true

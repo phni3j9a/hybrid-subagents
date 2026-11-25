@@ -1,10 +1,10 @@
 import { getSupportedThinkingLevels } from "@earendil-works/pi-ai";
 
 export const ROLES = {
-  "hybrid-subagents.worker": { provider: "openai-codex", id: "gpt-6-luna", thinking: "max" },
-  "hybrid-subagents.scout": { provider: "openai-codex", id: "gpt-6-luna", thinking: "xhigh" },
-  "hybrid-subagents.reviewer": { provider: "openai-codex", id: "gpt-6.1-sol", thinking: "high" },
-  "hybrid-subagents.designer": { provider: "anthropic", id: "claude-opus-5-5", thinking: "high" },
+  "hybrid-subagents.worker": { provider: "openai-codex", id: "gpt-6.2-sol", thinking: "high" },
+  "hybrid-subagents.scout": { provider: "openai-codex", id: "gpt-6.1-terra", thinking: "high" },
+  "hybrid-subagents.reviewer": { provider: "openai-codex", id: "gpt-6.2-astra", thinking: "high" },
+  "hybrid-subagents.designer": { provider: "anthropic", id: "claude-fable-5-2", thinking: "xhigh" },
 } as const;
 
 export type RoleName = keyof typeof ROLES;

@@ -36,7 +36,7 @@ test("start opens a full-access specialist right of Main, writes its brief and p
   assert.equal(pane.cwd, "/repo");
   assert.deepEqual(herdr.starts[0], {
     name: "worker-1", kind: "codex", pane: "w1:p2",
-    args: ["-m", "gpt-6-luna", "-c", 'model_reasoning_effort="max"', "--dangerously-bypass-approvals-and-sandbox"],
+    args: ["-m", "gpt-6.2-sol", "-c", 'model_reasoning_effort="high"', "--dangerously-bypass-approvals-and-sandbox"],
   });
   const record = readChild(dir(), "worker-1")!;
   assert.equal(record.blockedAtStart, false);

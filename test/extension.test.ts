@@ -105,7 +105,7 @@ test("missing runtime and authentication produce actionable diagnostics without 
     assert.match(h.notifications.join("\n"), /bundled pi-subagents is not loaded/);
     assert.match(h.notifications.join("\n"), /authenticate anthropic/);
     await h.commands.get("hybrid-subagents").handler("", h.ctx);
-    assert.match(h.notifications.at(-1)!, /hybrid-subagents.worker: openai-codex\/gpt-6-luna:max/);
+    assert.match(h.notifications.at(-1)!, /hybrid-subagents.worker: openai-codex\/gpt-6.2-sol:high/);
   } finally { h.handlers.get("session_shutdown")?.(); }
 });
 
@@ -119,14 +119,14 @@ test("diagnostics read the saved backup fresh and report registry and authentica
     await h.commands.get("hybrid-subagents").handler("", h.ctx);
     assert.match(h.notifications.at(-1)!, /backup: unknown\/missing:high/);
     assert.match(h.notifications.at(-1)!, /backup missing unknown\/missing/);
-    save("openai-codex/gpt-6.1-sol:high");
+    save("openai-codex/gpt-6.2-astra:high");
     h.ctx.modelRegistry.getAvailable = () => [];
     await h.commands.get("hybrid-subagents").handler("", h.ctx);
-    assert.match(h.notifications.at(-1)!, /backup: openai-codex\/gpt-6.1-sol:high/);
+    assert.match(h.notifications.at(-1)!, /backup: openai-codex\/gpt-6.2-astra:high/);
     assert.match(h.notifications.at(-1)!, /authenticate backup openai-codex/);
     const event = { systemPrompt: "Pi Main", systemPromptOptions: { selectedTools: ["subagent"], sections: {} as Record<string, string> } };
     await h.handlers.get("before_agent_start")!(event, h.ctx);
-    assert.match(event.systemPromptOptions.sections["hybrid-subagents"], /Configured backups:\n- hybrid-subagents\.worker: openai-codex\/gpt-6\.1-sol:high$/, "Main sees the saved backup without /reload");
+    assert.match(event.systemPromptOptions.sections["hybrid-subagents"], /Configured backups:\n- hybrid-subagents\.worker: openai-codex\/gpt-6\.2-astra:high$/, "Main sees the saved backup without /reload");
     writeFileSync(file, original);
     await h.handlers.get("before_agent_start")!(event, h.ctx);
     assert.doesNotMatch(event.systemPromptOptions.sections["hybrid-subagents"], /Configured backups:\n/);
