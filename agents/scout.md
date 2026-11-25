@@ -3,8 +3,8 @@ name: scout
 package: hybrid-subagents
 description: Read-only code exploration and root-cause investigation when relevant files or dependencies are unknown.
 advertise: true
-model: openai-codex/gpt-6-luna:xhigh
-thinking: xhigh
+model: openai-codex/gpt-6.1-terra:high
+thinking: high
 systemPromptMode: append
 inheritProjectContext: true
 inheritGlobalContext: true

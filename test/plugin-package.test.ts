@@ -60,7 +60,7 @@ test("the helper prints JSON results and errors with matching exit codes", async
   const shown = await run(["config", "show"], { env: config });
   assert.equal(shown.code, 0);
   assert.equal(shown.result.ok, true);
-  assert.equal(shown.result.roles.worker.model, "gpt-6-luna");
+  assert.equal(shown.result.roles.worker.model, "gpt-6.2-sol");
   const saved = await run(["config", "set", "scout", "--runtime=claude", "--model", "claude-sonnet-5", "--effort", "medium", "--scope", "user"], { env: config });
   assert.equal(saved.result.effective.runtime, "claude");
   const outside = await run(["start", "--role", "worker"], { input: "Fix it." });

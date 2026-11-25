@@ -8,28 +8,28 @@ Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じ
 
 ## Agent構成
 
-以下は**初期値**です。4役割のモデル・Thinking・Fastモードは `/hybrid-subagents models` で変更できます。Workerの `max` も変更可能です。Fastモードの初期値は全役割でoffです。
+以下は**初期値**です。4役割のモデル・Thinking・Fastモードは `/hybrid-subagents models` で変更できます。Fastモードの初期値は全役割でoffです。
 
 | Agent | PiのモデルID | Thinking | 担当 |
 | --- | --- | --- | --- |
 | Main | Piで選択中のモデル | 現在の設定 | 対話、計画、委任、統合、最終判断 |
-| `hybrid-subagents.worker` | `openai-codex/gpt-6-luna` | `max` | 実装、修正、周辺調査、局所テスト |
-| `hybrid-subagents.scout` | `openai-codex/gpt-6-luna` | `xhigh` | 対象ファイルが不明な読み取り探索 |
-| `hybrid-subagents.reviewer` | `openai-codex/gpt-6.1-sol` | `high` | 変更によって導入された具体的な不具合の検出 |
-| `hybrid-subagents.designer` | `anthropic/claude-opus-5-5` | `high` | UI/UX設計、画面・コンポーネント実装 |
+| `hybrid-subagents.worker` | `openai-codex/gpt-6.2-sol` | `high` | 実装、修正、周辺調査、局所テスト |
+| `hybrid-subagents.scout` | `openai-codex/gpt-6.1-terra` | `high` | 対象ファイルが不明な読み取り探索 |
+| `hybrid-subagents.reviewer` | `openai-codex/gpt-6.2-astra` | `high` | 変更によって導入された具体的な不具合の検出 |
+| `hybrid-subagents.designer` | `anthropic/claude-fable-5-2` | `xhigh` | UI/UX設計、画面・コンポーネント実装 |
 
 各Agentの実行時間の上限は4時間です（pi-subagentsの初期値は30分）。CI待ちなどの長い作業でも打ち切られにくくするためで、Mainは起動時に上限を指定しません。役割ごとに変える場合は `subagents.agentOverrides` に `timeoutMs`（ミリ秒）を設定します。
 
-Opus 5.5のPiネイティブIDは `claude-opus-5-5` です。初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。下記のバックアップモデルを登録した場合を除き、暗黙の切り替えは行いません。
+初期設定ではOpenAI側は `openai-codex`、Designerは `anthropic` を使用します。ユーザーが別のPiプロバイダー／モデルを選択できます。下記のバックアップモデルを登録した場合を除き、暗黙の切り替えは行いません。
 
 ## インストール
 
-検証対象: **Pi 1.5.0 / pi-subagents 0.87.0（同梱）/ Node.js 22.19以上**。旧 `@mariozechner/*` 世代のPiは対象外です。
+検証対象: **Pi 1.6.0 / pi-subagents 0.87.0（同梱）/ Node.js 22.19以上**。旧 `@mariozechner/*` 世代のPiは対象外です。
 
 Piが未導入なら、先に導入します。
 
 ```sh
-npm install -g @earendil-works/pi-coding-agent@1.5.0
+npm install -g @earendil-works/pi-coding-agent@1.6.0
 ```
 
 Hybrid SubagentsだけをPiパッケージとして登録してください。pi-subagentsは同梱されているため、別にインストールする必要はありません。
@@ -207,10 +207,10 @@ Claude Codeでは `/hybrid-subagents:hybrid-subagents` のように、プラグ�
 
 | 役割 | 担当 | CLI | モデル | 推論強度 |
 | --- | --- | --- | --- | --- |
-| worker | 実装、修正、周辺調査、局所テスト | codex | `gpt-6-luna` | `max` |
-| scout | 対象ファイルが不明な読み取り探索 | codex | `gpt-6-luna` | `xhigh` |
-| reviewer | 変更によって導入された具体的な不具合の検出 | codex | `gpt-6.1-sol` | `high` |
-| designer | UI/UX設計、画面・コンポーネント実装 | claude | `claude-opus-5-5` | `high` |
+| worker | 実装、修正、周辺調査、局所テスト | codex | `gpt-6.2-sol` | `high` |
+| scout | 対象ファイルが不明な読み取り探索 | codex | `gpt-6.1-terra` | `high` |
+| reviewer | 変更によって導入された具体的な不具合の検出 | codex | `gpt-6.2-astra` | `high` |
+| designer | UI/UX設計、画面・コンポーネント実装 | claude | `claude-fable-5-2` | `xhigh` |
 
 どの役割にも、どのCLI・モデルでも割り当てられます。Fastの初期値は全役割offです。
 

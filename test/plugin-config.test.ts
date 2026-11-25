@@ -28,7 +28,7 @@ test("defaults match the Pi package roles, models and effort levels", () => {
   assert.deepEqual(config.roles, DEFAULT_ROLES);
   assert.deepEqual(
     Object.fromEntries(Object.entries(DEFAULT_ROLES).map(([name, role]) => [name, `${role.runtime}/${role.model}:${role.effort}`])),
-    { worker: "codex/gpt-6-luna:max", scout: "codex/gpt-6-luna:xhigh", reviewer: "codex/gpt-6.1-sol:high", designer: "claude/claude-opus-5-5:high" },
+    { worker: "codex/gpt-6.2-sol:high", scout: "codex/gpt-6.1-terra:high", reviewer: "codex/gpt-6.2-astra:high", designer: "claude/claude-fable-5-2:xhigh" },
   );
   assert.equal(config.sources.worker.model, "default");
   assert.deepEqual(config.errors, []);

@@ -16,10 +16,10 @@ type Field = typeof FIELDS[number];
 
 // The same roles, models and effort levels as the Pi package defaults.
 export const DEFAULT_ROLES: Record<RoleName, RoleConfig> = {
-  worker: { runtime: "codex", model: "gpt-6-luna", effort: "max", fast: false, args: [] },
-  scout: { runtime: "codex", model: "gpt-6-luna", effort: "xhigh", fast: false, args: [] },
-  reviewer: { runtime: "codex", model: "gpt-6.1-sol", effort: "high", fast: false, args: [] },
-  designer: { runtime: "claude", model: "claude-opus-5-5", effort: "high", fast: false, args: [] },
+  worker: { runtime: "codex", model: "gpt-6.2-sol", effort: "high", fast: false, args: [] },
+  scout: { runtime: "codex", model: "gpt-6.1-terra", effort: "high", fast: false, args: [] },
+  reviewer: { runtime: "codex", model: "gpt-6.2-astra", effort: "high", fast: false, args: [] },
+  designer: { runtime: "claude", model: "claude-fable-5-2", effort: "xhigh", fast: false, args: [] },
 };
 
 export const PROJECT_CONFIG = path.join(".agents", "hybrid-subagents.json");

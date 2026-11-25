@@ -56,23 +56,23 @@ function ui(answers: (string | undefined)[], confirm = true) {
 }
 
 test("role picker saves a different model and lower thinking to native settings, preserving unrelated fields", async () => {
-  const h = ui(["openai-codex", "gpt-6.1-sol", "low", OFF, "User — all projects"]);
+  const h = ui(["openai-codex", "gpt-6.2-astra", "low", OFF, "User — all projects"]);
   await modelCommand("worker", h.ctx);
   const saved = JSON.parse(readFileSync(settingsPath, "utf8"));
   assert.equal(saved.theme, "dark");
   assert.deepEqual(saved.subagents.agentOverrides.unrelated, base.subagents.agentOverrides.unrelated);
-  assert.deepEqual(saved.subagents.agentOverrides["hybrid-subagents.worker"], { tools: ["read", "edit"], fast: false, model: "openai-codex/gpt-6.1-sol:low", thinking: "low" });
+  assert.deepEqual(saved.subagents.agentOverrides["hybrid-subagents.worker"], { tools: ["read", "edit"], fast: false, model: "openai-codex/gpt-6.2-astra:low", thinking: "low" });
   assert.equal(existsSync(backupPath), false);
-  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", h.ctx)), "openai-codex/gpt-6.1-sol:low");
+  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", h.ctx)), "openai-codex/gpt-6.2-astra:low");
   assert.match(h.notifications.at(-1)!.text, /Applies to new children/);
   assert.equal(h.notifications.at(-1)!.type, "info");
 });
 
 test("top-level menu shows effective choices and edits the selected role", async () => {
-  const h = ui(["scout — openai-codex/gpt-6-luna:xhigh", "anthropic", "claude-opus-5-5", "high", "User — all projects"]);
+  const h = ui(["scout — openai-codex/gpt-6.1-terra:high", "anthropic", "claude-fable-5-2", "high", "User — all projects"]);
   await modelCommand("", h.ctx);
   assert.equal(h.dialogs[0].options.length, 4);
-  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.scout", h.ctx)), "anthropic/claude-opus-5-5:high");
+  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.scout", h.ctx)), "anthropic/claude-fable-5-2:high");
 });
 
 test("non-reasoning models offer only off, and off is saved explicitly", async () => {
@@ -84,7 +84,7 @@ test("non-reasoning models offer only off, and off is saved explicitly", async (
 });
 
 test("cancelling any selection dialog writes nothing", async () => {
-  const steps = ["openai-codex", "gpt-6.1-sol", "low", OFF, "User — all projects"];
+  const steps = ["openai-codex", "gpt-6.2-astra", "low", OFF, "User — all projects"];
   const original = readFileSync(settingsPath, "utf8");
   for (let index = 0; index < steps.length; index++) {
     await modelCommand("worker", ui([...steps.slice(0, index), undefined]).ctx);
@@ -95,23 +95,23 @@ test("cancelling any selection dialog writes nothing", async () => {
 });
 
 test("project setting wins, persists independently, and shadowed user saves are reported", async () => {
-  const h = ui(["openai-codex", "gpt-6.1-sol", "high", OFF, "Project — this project only"]);
+  const h = ui(["openai-codex", "gpt-6.2-astra", "high", OFF, "Project — this project only"]);
   await modelCommand("worker", h.ctx);
-  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", h.ctx)), "openai-codex/gpt-6.1-sol:high");
+  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", h.ctx)), "openai-codex/gpt-6.2-astra:high");
   assert.equal(readFileSync(settingsPath, "utf8"), JSON.stringify(base));
-  const another = ui(["openai-codex", "gpt-6-luna", "low", OFF, "User — all projects"]);
+  const another = ui(["openai-codex", "gpt-6.2-sol", "low", OFF, "User — all projects"]);
   await modelCommand("worker", another.ctx);
-  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", another.ctx)), "openai-codex/gpt-6.1-sol:high");
+  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", another.ctx)), "openai-codex/gpt-6.2-astra:high");
   assert.match(another.notifications.at(-1)!.text, /Current project uses/);
   assert.equal(another.notifications.at(-1)!.type, "warning");
   const nested = path.join(cwd, "src"); mkdirSync(nested, { recursive: true });
-  await saveSelection(nested, "hybrid-subagents.scout", { provider: "openai-codex", id: "gpt-6.1-sol", thinking: "medium" }, "project");
+  await saveSelection(nested, "hybrid-subagents.scout", { provider: "openai-codex", id: "gpt-6.2-astra", thinking: "medium" }, "project");
   assert.equal(existsSync(path.join(nested, ".pi")), false, "reuse the configured project root");
-  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.scout", h.ctx)), "openai-codex/gpt-6.1-sol:medium");
+  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.scout", h.ctx)), "openai-codex/gpt-6.2-astra:medium");
 });
 
 test("reset restores all initial values including Worker max without erasing other settings", async () => {
-  await saveSelection(cwd, "hybrid-subagents.worker", { provider: "openai-codex", id: "gpt-6.1-sol", thinking: "low" }, "user");
+  await saveSelection(cwd, "hybrid-subagents.worker", { provider: "openai-codex", id: "gpt-6.2-astra", thinking: "low" }, "user");
   const h = ui(["User — all projects"]);
   await modelCommand("reset", h.ctx);
   for (const name of Object.keys(ROLES) as (keyof typeof ROLES)[]) assert.equal(modelSpec(await configuredSelection(name, h.ctx)), modelSpec(name));
@@ -132,7 +132,7 @@ test("cancelled reset, headless invocation, unknown roles and unavailable authen
 });
 
 test("untrusted projects cannot be chosen as the save scope", async () => {
-  const h = ui(["openai-codex", "gpt-6-luna", "low", OFF, undefined]);
+  const h = ui(["openai-codex", "gpt-6.2-sol", "low", OFF, undefined]);
   h.ctx.isProjectTrusted = () => false;
   await modelCommand("worker", h.ctx);
   assert.deepEqual(h.dialogs.at(-1)!.options, ["User — all projects"]);
@@ -140,25 +140,25 @@ test("untrusted projects cannot be chosen as the save scope", async () => {
 
 test("malformed settings are not overwritten", async () => {
   writeFileSync(settingsPath, "{broken json");
-  const h = ui(["openai-codex", "gpt-6.1-sol", "low", OFF, "User — all projects"]);
+  const h = ui(["openai-codex", "gpt-6.2-astra", "low", OFF, "User — all projects"]);
   await assert.rejects(modelCommand("worker", h.ctx), /parse settings/);
   assert.equal(readFileSync(settingsPath, "utf8"), "{broken json");
   assert.equal(existsSync(backupPath), false, "No legacy Fast file is created");
   writeFileSync(backupPath, JSON.stringify({ fast: { "hybrid-subagents.scout": true } }));
-  await assert.rejects(modelCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", ON, "User — all projects"]).ctx), /parse settings/);
+  await assert.rejects(modelCommand("worker", ui(["openai-codex", "gpt-6.2-astra", "low", ON, "User — all projects"]).ctx), /parse settings/);
   assert.deepEqual(JSON.parse(readFileSync(backupPath, "utf8")), { fast: { "hybrid-subagents.scout": true } }, "Legacy Fast file is untouched");
 });
 
 test("legacy Fast files are ignored and never modified, even when malformed", async () => {
   writeFileSync(backupPath, "{broken json");
-  const h = ui(["openai-codex", "gpt-6.1-sol", "low", ON, "User — all projects"]);
+  const h = ui(["openai-codex", "gpt-6.2-astra", "low", ON, "User — all projects"]);
   await modelCommand("worker", h.ctx);
   assert.equal(await configuredFast("hybrid-subagents.worker", h.ctx), true);
   assert.equal(readFileSync(backupPath, "utf8"), "{broken json");
 });
 
 test("Fast saves for different roles are merged, not replaced", async () => {
-  const selection = { provider: "openai-codex", id: "gpt-6-luna", thinking: "high" as const };
+  const selection = { provider: "openai-codex", id: "gpt-6.2-sol", thinking: "high" as const };
   await saveSelection(cwd, "hybrid-subagents.worker", selection, "user", true);
   await saveSelection(cwd, "hybrid-subagents.scout", selection, "user", false);
   const overrides = JSON.parse(readFileSync(settingsPath, "utf8")).subagents.agentOverrides;
@@ -167,16 +167,16 @@ test("Fast saves for different roles are merged, not replaced", async () => {
 });
 
 test("Fast mode is offered only for the legacy openai-codex provider, saved explicitly and shown in the role menu", async () => {
-  const h = ui(["openai-codex", "gpt-6-luna", "high", ON, "User — all projects"]);
+  const h = ui(["openai-codex", "gpt-6.2-sol", "high", ON, "User — all projects"]);
   await modelCommand("worker", h.ctx);
   assert.deepEqual(h.dialogs[3], { title: "hybrid-subagents.worker — fast mode", options: [OFF, ON] });
   assert.equal(JSON.parse(readFileSync(settingsPath, "utf8")).subagents.agentOverrides["hybrid-subagents.worker"].fast, true);
   assert.equal(await configuredFast("hybrid-subagents.worker", h.ctx), true);
-  assert.match(h.notifications.at(-1)!.text, /saved openai-codex\/gpt-6-luna:high fast/);
+  assert.match(h.notifications.at(-1)!.text, /saved openai-codex\/gpt-6.2-sol:high fast/);
   const menu = ui([undefined]);
   await modelCommand("", menu.ctx);
-  assert.ok(menu.dialogs[0].options.includes("worker — openai-codex/gpt-6-luna:high fast"));
-  const anthropic = ui(["anthropic", "claude-opus-5-5", "high", "User — all projects"]);
+  assert.ok(menu.dialogs[0].options.includes("worker — openai-codex/gpt-6.2-sol:high fast"));
+  const anthropic = ui(["anthropic", "claude-fable-5-2", "high", "User — all projects"]);
   await modelCommand("worker", anthropic.ctx);
   assert.ok(!anthropic.dialogs.some((dialog) => dialog.title.endsWith("fast mode")));
   assert.equal(await configuredFast("hybrid-subagents.worker", anthropic.ctx), false);
@@ -195,7 +195,7 @@ test("openai skips Fast and clears a previous native Fast choice", async () => {
 });
 
 test("project Fast choice overrides the user choice; reset turns Fast off", async () => {
-  const selection = { provider: "openai-codex", id: "gpt-6-luna", thinking: "high" as const };
+  const selection = { provider: "openai-codex", id: "gpt-6.2-sol", thinking: "high" as const };
   await saveSelection(cwd, "hybrid-subagents.worker", selection, "user", true);
   const h = ui([]);
   assert.equal(await configuredFast("hybrid-subagents.worker", h.ctx), true);
@@ -203,7 +203,7 @@ test("project Fast choice overrides the user choice; reset turns Fast off", asyn
   assert.equal(await configuredFast("hybrid-subagents.worker", h.ctx), false);
   h.ctx.isProjectTrusted = () => false;
   assert.equal(await configuredFast("hybrid-subagents.worker", h.ctx), true, "untrusted project settings are ignored");
-  await saveSelection(cwd, "hybrid-subagents.worker", { provider: "anthropic", id: "claude-opus-5-5", thinking: "high" }, "user", true);
+  await saveSelection(cwd, "hybrid-subagents.worker", { provider: "anthropic", id: "claude-fable-5-2", thinking: "high" }, "user", true);
   assert.equal(JSON.parse(readFileSync(settingsPath, "utf8")).subagents.agentOverrides["hybrid-subagents.worker"].fast, false, "unsupported providers never save Fast");
   rmSync(path.join(cwd, ".pi"), { recursive: true, force: true });
   await saveSelection(cwd, "hybrid-subagents.scout", selection, "user", true);
@@ -215,9 +215,9 @@ test("provider-scoped native choices are displayed instead of rejected by a cust
   const h = ui([]);
   h.ctx.model = models.find((model) => model.provider === "anthropic")!;
   writeFileSync(settingsPath, JSON.stringify({ ...base, subagents: { ...base.subagents, agentOverridesByProvider: {
-    anthropic: { "hybrid-subagents.worker": { model: "openai-codex/gpt-6.1-sol:low", thinking: "low", fast: true } },
+    anthropic: { "hybrid-subagents.worker": { model: "openai-codex/gpt-6.2-astra:low", thinking: "low", fast: true } },
   } } }));
-  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", h.ctx)), "openai-codex/gpt-6.1-sol:low");
+  assert.equal(modelSpec(await configuredSelection("hybrid-subagents.worker", h.ctx)), "openai-codex/gpt-6.2-astra:low");
   assert.equal(await configuredFast("hybrid-subagents.worker", h.ctx), true);
 });
 
@@ -230,11 +230,11 @@ test("slash completions expose model selection, roles and reset", () => {
 test("backup saves to hybrid-subagents.json, never Pi settings, and clears preserving unrelated fields", async () => {
   const original = readFileSync(settingsPath, "utf8");
   writeFileSync(backupPath, JSON.stringify({ fast: { "hybrid-subagents.worker": true }, backupModels: { "hybrid-subagents.scout": "keep/me:high" } }));
-  await backupCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", "User — all projects"]).ctx);
+  await backupCommand("worker", ui(["openai-codex", "gpt-6.2-astra", "low", "User — all projects"]).ctx);
   assert.equal(readFileSync(settingsPath, "utf8"), original, "pi-subagents 0.85+ rejects unknown agentOverrides fields");
-  assert.deepEqual(JSON.parse(readFileSync(backupPath, "utf8")), { fast: { "hybrid-subagents.worker": true }, backupModels: { "hybrid-subagents.scout": "keep/me:high", "hybrid-subagents.worker": "openai-codex/gpt-6.1-sol:low" } });
+  assert.deepEqual(JSON.parse(readFileSync(backupPath, "utf8")), { fast: { "hybrid-subagents.worker": true }, backupModels: { "hybrid-subagents.scout": "keep/me:high", "hybrid-subagents.worker": "openai-codex/gpt-6.2-astra:low" } });
   await modelCommand("reset", ui(["User — all projects"]).ctx);
-  assert.equal(modelSpec((await configuredBackup(ui([]).ctx, "hybrid-subagents.worker"))!), "openai-codex/gpt-6.1-sol:low");
+  assert.equal(modelSpec((await configuredBackup(ui([]).ctx, "hybrid-subagents.worker"))!), "openai-codex/gpt-6.2-astra:low");
   const h = ui(["None — no backup", "User — all projects"]);
   await backupCommand("worker", h.ctx);
   assert.deepEqual(JSON.parse(readFileSync(backupPath, "utf8")).backupModels, { "hybrid-subagents.scout": "keep/me:high" });
@@ -243,22 +243,22 @@ test("backup saves to hybrid-subagents.json, never Pi settings, and clears prese
 
 test("backup cancels without writing at each step, rejects primary and saves project scope", async () => {
   const original = readFileSync(settingsPath, "utf8");
-  const steps = ["openai-codex", "gpt-6.1-sol", "low", "User — all projects"];
+  const steps = ["openai-codex", "gpt-6.2-astra", "low", "User — all projects"];
   for (let i = 0; i < steps.length; i++) {
     await backupCommand("worker", ui([...steps.slice(0, i), undefined]).ctx);
     assert.equal(existsSync(backupPath), false);
   }
   await backupCommand("", ui([undefined]).ctx);
   await backupCommand("worker", ui(["None — no backup", undefined]).ctx);
-  const same = ui(["openai-codex", "gpt-6-luna", "low"]);
+  const same = ui(["openai-codex", "gpt-6.2-sol", "low"]);
   await backupCommand("worker", same.ctx);
   assert.match(same.notifications[0].text, /must differ/);
   await backupCommand("worker", ui(["None — no backup", "User — all projects"]).ctx);
   assert.equal(existsSync(backupPath), false, "clearing a missing backup creates no file");
-  await backupCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", "Project — this project only"]).ctx);
-  assert.equal(JSON.parse(readFileSync(path.join(cwd, ".pi/hybrid-subagents.json"), "utf8")).backupModels["hybrid-subagents.worker"], "openai-codex/gpt-6.1-sol:low");
+  await backupCommand("worker", ui(["openai-codex", "gpt-6.2-astra", "low", "Project — this project only"]).ctx);
+  assert.equal(JSON.parse(readFileSync(path.join(cwd, ".pi/hybrid-subagents.json"), "utf8")).backupModels["hybrid-subagents.worker"], "openai-codex/gpt-6.2-astra:low");
   assert.equal(existsSync(path.join(cwd, ".pi/settings.json")), false);
-  assert.equal(modelSpec((await configuredBackup(ui([]).ctx, "hybrid-subagents.worker"))!), "openai-codex/gpt-6.1-sol:low", "fresh read without /reload");
+  assert.equal(modelSpec((await configuredBackup(ui([]).ctx, "hybrid-subagents.worker"))!), "openai-codex/gpt-6.2-astra:low", "fresh read without /reload");
   const untrusted = ui([]); untrusted.ctx.isProjectTrusted = () => false;
   assert.equal(await configuredBackup(untrusted.ctx, "hybrid-subagents.worker"), undefined, "untrusted project backup is ignored");
   assert.equal(readFileSync(settingsPath, "utf8"), original);
@@ -267,6 +267,6 @@ test("backup cancels without writing at each step, rejects primary and saves pro
 
 test("backup save refuses malformed hybrid-subagents.json without overwriting", async () => {
   writeFileSync(backupPath, "{broken");
-  await assert.rejects(backupCommand("worker", ui(["openai-codex", "gpt-6.1-sol", "low", "User — all projects"]).ctx), /parse settings/);
+  await assert.rejects(backupCommand("worker", ui(["openai-codex", "gpt-6.2-astra", "low", "User — all projects"]).ctx), /parse settings/);
   assert.equal(readFileSync(backupPath, "utf8"), "{broken");
 });

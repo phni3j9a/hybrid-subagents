@@ -127,7 +127,7 @@ test("native reviewer schema accepts empty findings and rejects malformed priori
 });
 
 test("native thinking ceiling remains authoritative", async () => {
-  const result = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, thinkingCeiling: "high" });
+  const result = await resolveSubagentLaunchContract({ agent: "hybrid-subagents.worker", cwd: fixture, thinkingCeiling: "medium" });
   assert.equal(result.ok, false);
   if (!result.ok) assert.equal(result.code, "thinking_ceiling");
 });
