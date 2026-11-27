@@ -14,7 +14,7 @@ Pi版は、通常のPiをMainにして、4種類の専門Agentを必要に応じ
 | --- | --- | --- | --- |
 | Main | Piで選択中のモデル | 現在の設定 | 対話、計画、委任、統合、最終判断 |
 | `hybrid-subagents.worker` | `openai-codex/gpt-6.2-sol` | `high` | 実装、修正、周辺調査、局所テスト |
-| `hybrid-subagents.scout` | `openai-codex/gpt-6.1-terra` | `high` | 対象ファイルが不明な読み取り探索 |
+| `hybrid-subagents.scout` | `openai-codex/gpt-6.1-terra` | `high` | 対象ファイルが不明な読み取り探索、ログ解析、Web調査 |
 | `hybrid-subagents.reviewer` | `openai-codex/gpt-6.2-astra` | `high` | 変更によって導入された具体的な不具合の検出 |
 | `hybrid-subagents.designer` | `anthropic/claude-fable-5-2` | `xhigh` | UI/UX設計、画面・コンポーネント実装 |
 
@@ -80,7 +80,7 @@ pi install npm:pi-hybrid-subagents
 この変更をレビューしてください。
 ```
 
-Mainは小さな作業を直接処理できます。ファイルが不明な読み取り探索はScout、調査から編集まで一続きの仕事はWorker、UI/UXはDesignerへ委任します。Reviewerの起動と再レビューはMainの完全裁量です。
+Mainは自分のコンテキストを節約するため、調査・実装・ログ解析・Web調査を原則として委任し、計画・判断・統合とユーザー対応を受け持ちます。依頼文を書くより早く済む小さな作業は直接処理します。ファイルが不明な読み取り探索・ログ解析・Web調査はScout、調査から編集まで一続きの仕事はWorker、UI/UXはDesignerへ委任します。Reviewerの起動と再レビューはMainの完全裁量です。
 
 - 並列作業ではファイルの担当と共有インターフェースを先に決めます。
 - Worker／Designerは担当範囲の小さなテストを実行できます。
@@ -90,6 +90,8 @@ Mainは小さな作業を直接処理できます。ファイルが不明な読�
 - Planner専用Agent、必須レビュー、合格までの反復、指摘台帳、独自Checkpointはありません。
 
 Scout／Reviewerの非編集方針はプロンプトによる役割定義です。4つのAgentには独自のツール許可リスト・禁止リストを設定しておらず、Pi／OS／既存Extensionの権限設定はそのまま適用されます。
+
+ScoutのWeb調査には、pi-web-accessなどWebツールを提供するExtensionが別途必要です。pi-subagentsの仕様で、親に導入しただけのExtensionはバックグラウンドの子（初期値）にだけ読み込まれます。フォアグラウンドのScoutで使うには、Agent定義の `extensions` に明示する必要があります。
 
 ## モデルとThinkingの選択
 
@@ -208,7 +210,7 @@ Claude Codeでは `/hybrid-subagents:hybrid-subagents` のように、プラグ�
 | 役割 | 担当 | CLI | モデル | 推論強度 |
 | --- | --- | --- | --- | --- |
 | worker | 実装、修正、周辺調査、局所テスト | codex | `gpt-6.2-sol` | `high` |
-| scout | 対象ファイルが不明な読み取り探索 | codex | `gpt-6.1-terra` | `high` |
+| scout | 対象ファイルが不明な読み取り探索、ログ解析、Web調査 | codex | `gpt-6.1-terra` | `high` |
 | reviewer | 変更によって導入された具体的な不具合の検出 | codex | `gpt-6.2-astra` | `high` |
 | designer | UI/UX設計、画面・コンポーネント実装 | claude | `claude-fable-5-2` | `xhigh` |
 

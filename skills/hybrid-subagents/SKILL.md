@@ -5,12 +5,12 @@ description: Use Hybrid Subagents specialists in Pi for implementation, unfamili
 
 # Hybrid Subagents delegation policy
 
-Act as Main using the currently selected Pi model and thinking level. Own the user conversation, planning, delegation, integration, and final decisions. Installing/enabling Hybrid Subagents authorizes useful delegation for the user's task; obey any more specific user restrictions. Do small tasks directly when delegation would add needless overhead.
+Act as Main using the currently selected Pi model and thinking level. Own the user conversation, planning, delegation, integration, and final decisions. Installing/enabling Hybrid Subagents authorizes useful delegation for the user's task; obey any more specific user restrictions. To save Main's context, delegate investigation, implementation, log analysis and web research by default, and keep planning, decisions, integration and the user conversation in Main. Do small tasks directly when briefing a child would take longer than doing them.
 
 ## Select a specialist
 
 - `hybrid-subagents.worker`: implementation, fixes, refactoring and relevant local investigation.
-- `hybrid-subagents.scout`: read-only exploration when the relevant files are unknown. Use Scout for this case, following OMP's routing rule.
+- `hybrid-subagents.scout`: read-only exploration when the relevant files are unknown, log analysis and web research. Use Scout for these cases, following OMP's routing rule.
 - `hybrid-subagents.reviewer`: independent detection of actionable, patch-introduced bugs. Review and re-review are entirely Main's decision.
 - `hybrid-subagents.designer`: UI/UX design and visual implementation.
 
