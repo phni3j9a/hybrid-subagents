@@ -91,7 +91,7 @@ Mainは自分のコンテキストを節約するため、調査・実装・ロ�
 
 Scout／Reviewerの非編集方針はプロンプトによる役割定義です。4つのAgentには独自のツール許可リスト・禁止リストを設定しておらず、Pi／OS／既存Extensionの権限設定はそのまま適用されます。
 
-ScoutのWeb調査には、pi-web-accessなどWebツールを提供するExtensionが別途必要です。pi-subagentsの仕様で、フォアグラウンドで起動した子にはこうしたExtensionが読み込まれないため、WebツールはバックグラウンドのScout（初期値）でだけ使えます。
+ScoutのWeb調査には、pi-web-accessなどWebツールを提供するExtensionが別途必要です。pi-subagentsの仕様で、親に導入しただけのExtensionはバックグラウンドの子（初期値）にだけ読み込まれます。フォアグラウンドのScoutで使うには、Agent定義の `extensions` に明示する必要があります。
 
 ## モデルとThinkingの選択
 
